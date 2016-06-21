@@ -83,11 +83,11 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
     } else {
 		return nil, err
 	}
-	/*ctidByte, err := stub.GetState("currentTransactionID")
+	_, err = stub.GetState("currentTransactionID")
     if err != nil {
         err = stub.PutState("currentTransactionID", []byte("0"))
     }
-	*/
+	
     return nil, err
 }
 func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
@@ -158,32 +158,83 @@ func (t *SimpleChaincode) readTransaction(stub *shim.ChaincodeStub, args []strin
     return valAsbytes, nil
 }
 // used by client to request for quotes for a particular stock, adds rfq transaction to ledger
-/*			arg 0	: 
-			arg 1	:	OptionType
-			arg 2	:	StockSymbol
-			arg 3	:	Quantity
-			arg 4	:
+/*			arg 0	:	OptionType
+			arg 1	:	StockSymbol
+			arg 2	:	Quantity
+			arg 3	:
 */
 func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	if len(args)== 4{
+	if len(args)== 3{
 		ctidByte, err := stub.GetState("currentTransactionID")
 		
 		tid,err := strconv.Atoi(string(ctidByte))
 		q,err := strconv.Atoi(args[3])
 		
+		bytes, err := stub.GetCallerCertificate();
+		x509Cert, err := x509.ParseCertificate(bytes);
+		
 		t := Transaction{
 		TransactionID: tid + 1,
 		TradeId: tid + 1,							// create new tradeID
 		TransactionType: "RFQ",
-		OptionType: args[1],   						// based on input 
-		ClientID:	"",								// get enrollmentID
+		OptionType: args[0],   						// based on input 
+		ClientID:	x509Cert.Subject.CommonName,	// enrollmentID
 		BankID: "",
-		StockSymbol: args[2],						// based on input
+		StockSymbol: args[1],						// based on input
 		Quantity:	q,								// based on input
 		OptionPrice: 0,
 		StockRate: 0,
 		SettlementDate: "",
 		}
+		err = stub.PutState("currentTransactionID", []byte(strconv.Itoa(tid + 1)))
+		// convert to JSON
+		b, err := json.Marshal(t)
+		
+		// write to ledger
+		if err == nil {
+			err = stub.PutState(strconv.Itoa(t.TransactionID),b)
+			return []byte(strconv.Itoa(t.TransactionID)), err
+		}
+	}
+	return nil, errors.New("Incorrect number of arguments")
+}
+/*			arg 0	:	TradeId or TransactionID of rfq
+			arg 1	:	OptionPrice
+			arg 2	:	StockRate
+			arg 3	:	SettlementDate
+*/
+func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	if len(args)== 4{
+		ctidByte, err := stub.GetState("currentTransactionID")
+		
+		tid,err := strconv.Atoi(string(ctidByte))
+		
+		rate, err := strconv.ParseFloat(args[2], 64)
+		price, err := strconv.ParseFloat(args[3], 64)
+		
+		tradeId,err := strconv.Atoi(args[0])
+		
+		bytes, err := stub.GetCallerCertificate();
+		x509Cert, err := x509.ParseCertificate(bytes);
+		
+		rfqbyte,err := stub.GetState("currentTransactionID")
+		var rfq Transaction
+		err = json.Unmarshal(rfqbyte, &rfq)		
+		
+		t := Transaction{
+		TransactionID: tid + 1,
+		TradeId: tradeId,							// based on input
+		TransactionType: "RESP",
+		OptionType: rfq.OptionType,					// get from rfq
+		ClientID:	rfq.ClientID,					// get from rfq
+		BankID: x509Cert.Subject.CommonName,		// enrollmentID
+		StockSymbol: rfq.StockSymbol,				// get from rfq
+		Quantity:	rfq.Quantity,					// get from rfq
+		OptionPrice: price,
+		StockRate: rate,
+		SettlementDate: args[3],
+		}
+		err = stub.PutState("currentTransactionID", []byte(strconv.Itoa(tid + 1)))
 		
 		// convert to JSON
 		b, err := json.Marshal(t)
@@ -191,14 +242,10 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 		// write to ledger
 		if err == nil {
 			err = stub.PutState(strconv.Itoa(t.TransactionID),b)
-			return nil, err
+			return []byte(strconv.Itoa(t.TransactionID)), err
 		}
 	}
 	return nil, errors.New("Incorrect number of arguments")
-}
-
-func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	return nil,nil	
 }
 
 func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
