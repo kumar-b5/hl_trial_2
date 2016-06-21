@@ -53,9 +53,11 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 		Options: []Option{{Symbol:"AMZN",Quantity:10,SettlementDate:"07/01/2016"}},
 	}
 	b, err := json.Marshal(client)
-	if err != nil {
+	if err == nil {
         err = stub.PutState(client.EntityId,b)
-    }
+    } else {
+		return nil, err
+	}
 	
 	bank1:= Entity{
 		EntityId: "entity2",
@@ -63,9 +65,11 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 		Portfolio: []Stock{{Symbol:"MSFT",Quantity:200},{Symbol:"AAPL",Quantity:250},{Symbol:"AMZN",Quantity:400}},
 	}
 	b, err = json.Marshal(bank1)
-	if err != nil {
+	if err == nil {
         err = stub.PutState(bank1.EntityId,b)
-    }
+    } else {
+		return nil, err
+	}
 	
 	bank2:= Entity{
 		EntityId: "entity3",
@@ -73,9 +77,11 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 		Portfolio: []Stock{{Symbol:"GOOGL",Quantity:150},{Symbol:"AAPL",Quantity:100}},
 	}
 	b, err = json.Marshal(bank2)
-	if err != nil {
+	if err == nil {
         err = stub.PutState(bank2.EntityId,b)
-    }	
+    } else {
+		return nil, err
+	}
 	/*ctidByte, err := stub.GetState("currentTransactionID")
     if err != nil {
         err = stub.PutState("currentTransactionID", []byte("0"))
