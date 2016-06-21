@@ -5,6 +5,7 @@ import (
 	"errors"
 	"encoding/json"
 	"strconv"
+	"crypto/x509"
 )
 type Stock struct{
 	Symbol string
@@ -110,6 +111,8 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
         return t.readEntity(stub, args)
     }	else if function =="readTransaction" {
 		return t.readTransaction(stub,args)
+	}	else if function =="getUserID" {
+		return t.getUserID(stub,args)
 	}
 	fmt.Println("query did not find func: " + function)
 
@@ -137,7 +140,6 @@ func (t *SimpleChaincode) readEntity(stub *shim.ChaincodeStub, args []string) ([
     }
     return valAsbytes, nil
 }
-
 func (t *SimpleChaincode) readTransaction(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
     var tid, jsonResp string
     var err error
@@ -209,6 +211,12 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 
 func (t *SimpleChaincode) getEntityState(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	return nil,nil
+}
+// get user id
+func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	bytes, err := stub.GetCallerCertificate();
+	x509Cert, err := x509.ParseCertificate(bytes);
+	return []byte(x509Cert.Subject.CommonName), err
 }
 
 
