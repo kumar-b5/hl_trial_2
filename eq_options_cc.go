@@ -88,7 +88,9 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
         err = stub.PutState("currentTransactionID", []byte("0"))
     }
 	
-    return nil, err
+	ctidByte,err := stub.GetState("currentTransactionID")
+	
+    return ctidByte, err
 }
 func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
     fmt.Println("invoke is running " + function)
@@ -101,7 +103,6 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
     } else if function == "respondToQuote" {
         return t.respondToQuote(stub, args)
     }
-	
 	
     fmt.Println("invoke did not find func: " + function)
     return nil, errors.New("Received unknown function invocation")
@@ -157,7 +158,6 @@ func (t *SimpleChaincode) readTransaction(stub *shim.ChaincodeStub, args []strin
         jsonResp = "{\"Error\":\"Failed to get state for " + tid + "\"}"
         return nil, errors.New(jsonResp)
     }
-
     return valAsbytes, nil
 }
 // used by client to request for quotes for a particular stock, adds rfq transaction to ledger
@@ -268,5 +268,3 @@ func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]
 	x509Cert, err := x509.ParseCertificate(bytes);
 	return []byte(x509Cert.Subject.CommonName), err
 }
-
-
