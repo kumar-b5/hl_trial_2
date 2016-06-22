@@ -101,11 +101,16 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 	*/
 	
 	err = stub.PutState("currentTransactionID", []byte("1000"))
+	if(err != nil){
+		return nil, errors.New("Error while putting currentTransactionID from ledger")
+	}
 	
 	ctidByte,err := stub.GetState("currentTransactionID")
-	
-	str:= "current TransactionID: "+string(ctidByte)
-    return []byte(str), err
+	if(err != nil){
+		return nil, errors.New("Error while getting currentTransactionID from ledger")
+	}
+	//str:= "current TransactionID: "+string(ctidByte)
+    return ctidByte, nil
 }
 func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
     fmt.Println("invoke is running " + function)
@@ -125,7 +130,7 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
     fmt.Println("query is running " + function)
 
     // Handle different functions
-    if function == "readEntity" {                       
+    if function == "readEntity" {
         return t.readEntity(stub, args)
     }	else if function =="readTransaction" {
 		return t.readTransaction(stub,args)
@@ -187,12 +192,28 @@ func (t *SimpleChaincode) readTransaction(stub *shim.ChaincodeStub, args []strin
 func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 3{
 		ctidByte, err := stub.GetState("currentTransactionID")
+		if(err != nil){
+			return nil, errors.New("Error while getting currentTransactionID from ledger")
+		}
 		
 		tid,err := strconv.Atoi(string(ctidByte))
-		q,err := strconv.Atoi(args[3])
+		if(err != nil){
+			return nil, errors.New("Error while converting ctidByte to integer")
+		}
+		q,err := strconv.Atoi(args[2])
+		if(err != nil){
+			return nil, errors.New("Error while converting args[2] to integer")
+		}
 		
 		bytes, err := stub.GetCallerCertificate();
+		if(err != nil){
+			return nil, errors.New("Error while getting caller certificate")
+		}
+				
 		x509Cert, err := x509.ParseCertificate(bytes);
+		if(err != nil){
+			return nil, errors.New("Error while parsing caller certificate")
+		}
 		
 		tid = tid + 1
 		
@@ -299,9 +320,15 @@ func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]
 }
 func (t *SimpleChaincode) getCurrentTransactionID(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	ctidByte,err := stub.GetState("currentTransactionID")
+	if err != nil {
+		return nil, errors.New("Error retrieving currentTransactionID")
+	}
     return ctidByte, err
 }
 func (t *SimpleChaincode) getValue(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	byteVal,err := stub.GetState("xyzabc")
-    return byteVal, err
+	if err != nil {
+		return nil, errors.New("Error retrieving key xyzabc")
+	}
+    return byteVal, nil
 }
