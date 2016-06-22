@@ -194,9 +194,11 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 		bytes, err := stub.GetCallerCertificate();
 		x509Cert, err := x509.ParseCertificate(bytes);
 		
+		tid = tid + 1
+		
 		t := Transaction{
-		TransactionID: tid + 1,
-		TradeId: tid + 1,							// create new tradeID
+		TransactionID: tid,
+		TradeId: tid,								// create new tradeID
 		TransactionType: "RFQ",
 		OptionType: args[0],   						// based on input 
 		ClientID:	x509Cert.Subject.CommonName,	// enrollmentID
@@ -207,14 +209,22 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 		StockRate: 0,
 		SettlementDate: "",
 		}
-		err = stub.PutState("currentTransactionID", []byte(strconv.Itoa(tid + 1)))
+		
 		// convert to JSON
 		b, err := json.Marshal(t)
 		
 		// write to ledger
 		if err == nil {
-			err = stub.PutState(strconv.Itoa(t.TransactionID),b)
-			return []byte(strconv.Itoa(t.TransactionID)), err
+			err = stub.PutState(strconv.Itoa(tid),b)
+			return b, err
+		} else {
+			return nil, errors.New("Json Marshalling error")
+		}
+		
+		err = stub.PutState("currentTransactionID", []byte(strconv.Itoa(tid)))
+		
+		if(err != nil){
+			return nil, errors.New("Error while writing currentTransactionID to ledger")
 		}
 	}
 	return nil, errors.New("Incorrect number of arguments")
@@ -288,7 +298,6 @@ func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]
 	return []byte(x509Cert.Subject.CommonName), err
 }
 func (t *SimpleChaincode) getCurrentTransactionID(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	err := stub.PutState("currentTransactionID", []byte("1000"))
 	ctidByte,err := stub.GetState("currentTransactionID")
     return ctidByte, err
 }
