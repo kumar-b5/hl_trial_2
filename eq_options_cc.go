@@ -117,9 +117,7 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
         return t.requestForQuote(stub, args)
     } else if function == "respondToQuote" {
         return t.respondToQuote(stub, args)
-    } else if function == "getValue" {
-        return t.getValue(stub, args)
-	}
+    } 
     fmt.Println("invoke did not find func: " + function)
     return nil, errors.New("Received unknown function invocation")
 }
@@ -133,7 +131,12 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
 		return t.readTransaction(stub,args)
 	}	else if function =="getUserID" {
 		return t.getUserID(stub,args)
+	}	else if function =="getCurrentTransactionID" {
+		return t.getCurrentTransactionID(stub,args)
+	}	else if function == "getValue" {
+        return t.getValue(stub, args)
 	}
+	
 	fmt.Println("query did not find func: " + function)
 
     return nil, errors.New("Received unknown function query")
@@ -285,10 +288,11 @@ func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]
 	return []byte(x509Cert.Subject.CommonName), err
 }
 func (t *SimpleChaincode) getCurrentTransactionID(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	err := stub.PutState("currentTransactionID", []byte("1000"))
 	ctidByte,err := stub.GetState("currentTransactionID")
-    return []byte(string(ctidByte)), err
+    return ctidByte, err
 }
 func (t *SimpleChaincode) getValue(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	_,err := stub.GetState("xyzabc")
-    return []byte(err.Error()), err
+    return []byte(err.Error()), nil
 }
