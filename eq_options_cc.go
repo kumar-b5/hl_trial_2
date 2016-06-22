@@ -1,3 +1,7 @@
+/*
+update trade status after every transaction
+
+*/
 package main
 import (
 	"fmt"
@@ -22,6 +26,11 @@ type Entity struct{
 	EntityName string
 	Portfolio []Stock
 	Options []Option
+}
+type Trade struct				
+{
+	TradeId int					// rfq transaction id
+	Status string				// "Quote requested" or "Responded" or "Trade executed" or "Trade settled" or "Trade timed out"
 }
 type Transaction struct{		// ledger transactions
 	TransactionID int			// different for every transaction
@@ -90,9 +99,12 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
         err = stub.PutState("currentTransactionID", []byte("0"))
     }
 	*/
+	
+	err = stub.PutState("currentTransactionID", []byte("1000"))
+	
 	ctidByte,err := stub.GetState("currentTransactionID")
 	
-	str:= "curretn TransactionID: "+string(ctidByte)
+	str:= "current TransactionID: "+string(ctidByte)
     return []byte(str), err
 }
 func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
@@ -105,8 +117,9 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
         return t.requestForQuote(stub, args)
     } else if function == "respondToQuote" {
         return t.respondToQuote(stub, args)
-    }
-	
+    } else if function == "getValue" {
+        return t.getValue(stub, args)
+	}
     fmt.Println("invoke did not find func: " + function)
     return nil, errors.New("Received unknown function invocation")
 }
@@ -167,7 +180,6 @@ func (t *SimpleChaincode) readTransaction(stub *shim.ChaincodeStub, args []strin
 /*			arg 0	:	OptionType
 			arg 1	:	StockSymbol
 			arg 2	:	Quantity
-			arg 3	:
 */
 func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 3{
@@ -211,19 +223,23 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 */
 func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 4{
+		
 		ctidByte, err := stub.GetState("currentTransactionID")
 		
 		tid,err := strconv.Atoi(string(ctidByte))
 		
+		// get required data from input
 		rate, err := strconv.ParseFloat(args[2], 64)
 		price, err := strconv.ParseFloat(args[3], 64)
 		
 		tradeId,err := strconv.Atoi(args[0])
 		
+		// get bank's enrollment id
 		bytes, err := stub.GetCallerCertificate();
 		x509Cert, err := x509.ParseCertificate(bytes);
 		
-		rfqbyte,err := stub.GetState("currentTransactionID")
+		// tradeID
+		rfqbyte,err := stub.GetState("currentTransactionID")												// <<<<<<<<<<<<<<<<<<<<<<<<<<----------------------------------------
 		var rfq Transaction
 		err = json.Unmarshal(rfqbyte, &rfq)		
 		
@@ -271,4 +287,8 @@ func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]
 func (t *SimpleChaincode) getCurrentTransactionID(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	ctidByte,err := stub.GetState("currentTransactionID")
     return []byte(string(ctidByte)), err
+}
+func (t *SimpleChaincode) getValue(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	_,err := stub.GetState("xyzabc")
+    return []byte(err.Error()), err
 }
