@@ -302,6 +302,6 @@ func (t *SimpleChaincode) getCurrentTransactionID(stub *shim.ChaincodeStub, args
     return ctidByte, err
 }
 func (t *SimpleChaincode) getValue(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	_,err := stub.GetState("xyzabc")
-    return []byte(err.Error()), nil
+	byteVal,err := stub.GetState("xyzabc")
+    return byteVal, err
 }
