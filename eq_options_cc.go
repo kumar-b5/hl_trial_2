@@ -27,7 +27,7 @@ type Transaction struct{		// ledger transactions
 	TransactionID int			// different for every transaction
 	TradeId int					// same for all transactions corresponding to a single trade
 	TransactionType string		// type of transaction rfq or resp or tradeExec or tradeSet
-	OptionType string    				// buy/sell
+	OptionType string    		// buy/sell
 	ClientID string				// entityId of client
 	BankID string				// entityId of bank1 or bank2
 	StockSymbol string				
@@ -83,14 +83,17 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
     } else {
 		return nil, err
 	}
+	
+	/*
 	_, err = stub.GetState("currentTransactionID")
     if err != nil {
         err = stub.PutState("currentTransactionID", []byte("0"))
     }
-	
+	*/
 	ctidByte,err := stub.GetState("currentTransactionID")
 	
-    return ctidByte, err
+	str:= "curretn TransactionID: "+string(ctidByte)
+    return []byte(str), err
 }
 func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
     fmt.Println("invoke is running " + function)
@@ -233,9 +236,9 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		BankID: x509Cert.Subject.CommonName,		// enrollmentID
 		StockSymbol: rfq.StockSymbol,				// get from rfq
 		Quantity:	rfq.Quantity,					// get from rfq
-		OptionPrice: price,
-		StockRate: rate,
-		SettlementDate: args[3],
+		OptionPrice: price,							// based on input
+		StockRate: rate,							// based on input
+		SettlementDate: args[3],					// based on input
 		}
 		err = stub.PutState("currentTransactionID", []byte(strconv.Itoa(tid + 1)))
 		
@@ -250,15 +253,12 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 	}
 	return nil, errors.New("Incorrect number of arguments")
 }
-
 func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	return nil,nil
 }
-
 func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	return nil,nil
 }
-
 func (t *SimpleChaincode) getEntityState(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	return nil,nil
 }
@@ -267,4 +267,8 @@ func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]
 	bytes, err := stub.GetCallerCertificate();
 	x509Cert, err := x509.ParseCertificate(bytes);
 	return []byte(x509Cert.Subject.CommonName), err
+}
+func (t *SimpleChaincode) getCurrentTransactionID(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	ctidByte,err := stub.GetState("currentTransactionID")
+    return []byte(string(ctidByte)), err
 }
