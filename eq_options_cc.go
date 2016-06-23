@@ -258,9 +258,9 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		
 	str = "inside respondToQuote "+ strconv.Itoa(len(args))
 	_ = stub.PutState("str", []byte(str))
-	return []byte("within respondToQuote"), nil
+	//return []byte("within respondToQuote"), nil
 	
-	if len(args)== 4{
+	if len(args)== 4 {
 		
 		str = "|| inside if"
 		err := stub.PutState("str", []byte(str))
