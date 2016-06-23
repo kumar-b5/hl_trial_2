@@ -119,7 +119,7 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
         return t.requestForQuote(stub, args)
     } else if function == "respondToQuote" {
         return t.respondToQuote(stub, args)
-    } 
+    }
     fmt.Println("invoke did not find func: " + function)
     return nil, errors.New("Received unknown function invocation")
 }
@@ -254,23 +254,20 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 			arg 3	:	SettlementDate
 */
 func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	var str string
-		
-	str = "inside respondToQuote "+ strconv.Itoa(len(args))
-	_ = stub.PutState("str", []byte(str))
-	//return []byte("within respondToQuote"), nil
+
+	er := stub.PutState("str1", []byte("inside resp"))
+	return nil, errors.New("***Returning error")
 	
 	if len(args)== 4 {
 		
-		str = "|| inside if"
-		err := stub.PutState("str", []byte(str))
-		
+		er = stub.PutState("str2", []byte("inside len(args) if"))
+	
 		ctidByte, err := stub.GetState("currentTransactionNum")
 		if(err != nil){
 			return nil, errors.New("Error while getting currentTransactionNum from ledger")
 		}
-		str = str + "|| got transNum "+string(ctidByte)
-		err = stub.PutState("str", []byte(str))
+		
+		er = stub.PutState("str3", []byte("inside len(args) if"))
 		
 		tid,err := strconv.Atoi(string(ctidByte))
 		if(err != nil){
