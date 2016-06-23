@@ -1,5 +1,4 @@
 /*
-update trade status after every transaction
 date data type
 */
 package main
@@ -20,6 +19,8 @@ type Option struct{
 	Quantity int
 	StockRate float64
 	SettlementDate string	
+	OptionPrice float64
+	BankID string
 }
 type Entity struct{
 	EntityId string				// enrollmentID
@@ -91,15 +92,10 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
     } else {
 		return nil, err
 	}
-	/*
-	_, err = stub.GetState("currentTransactionNum")
-    if err != nil {
-        err = stub.PutState("currentTransactionNum", []byte("0"))
-    }
-	*/
-	err = stub.PutState("currentTransactionNum", []byte("1000"))
-	if(err != nil){
-		return nil, errors.New("Error while putting currentTransactionNum from ledger")
+	
+	byteVal, err := stub.GetState("currentTransactionNum")
+	if len(byteVal) == 0 {
+		err = stub.PutState("currentTransactionNum", []byte("1000"))
 	}
 	
 	ctidByte,err := stub.GetState("currentTransactionNum")
@@ -244,70 +240,58 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 			return nil, errors.New("Error while writing currentTransactionNum to ledger")
 		}
 		
+		// update trade status
+		err = stub.PutState(tradeID, []byte("Quote requested"))
+		if(err != nil){
+			return nil, errors.New("Error while updating trade status")
+		}		
+		
 		return []byte(t.TransactionID), nil
 	}
 	return nil, errors.New("Incorrect number of arguments")
 }
-/*			arg 0	:	TradeId or TransactionID of rfq
-			arg 1	:	OptionPrice
-			arg 2	:	StockRate
-			arg 3	:	SettlementDate
+/*			arg 0	:	TradeId
+			arg 1	:	RequestID
+			arg 2	:	OptionPrice
+			arg 3	:	StockRate
+			arg 4	:	SettlementDate
 */
 func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-
-	//_= stub.PutState("str1", []byte("inside resp"))
-		
-	if len(args)== 4 {
-		
-		//_= stub.PutState("str2", []byte("inside len(args) if"))
-	
+	if len(args)== 5 {
 		ctidByte, err := stub.GetState("currentTransactionNum")
 		if(err != nil){
-			//_= stub.PutState("str", []byte("currentTransactionNum error"))
-			//return nil,nil
 			return nil, errors.New("Error while getting currentTransactionNum from ledger")
 		}
 		
-		//_= stub.PutState("str3", []byte("inside len(args) if"))
-		
 		tid,err := strconv.Atoi(string(ctidByte))
 		if(err != nil){
-			//_= stub.PutState("str", []byte("tid error"))
-			//return nil,nil
 			return nil, errors.New("Error while converting ctidByte to integer")
 		}		
 		// get required data from input
-		price, err := strconv.ParseFloat(args[1], 64)
+		price, err := strconv.ParseFloat(args[2], 64)
 		if(err != nil){
-			//_= stub.PutState("str", []byte("args[2] parse error"))
-			//return nil,nil
 			return nil, errors.New("Error while converting args[1] to float")
 		}
-		rate, err := strconv.ParseFloat(args[2], 64)
+		rate, err := strconv.ParseFloat(args[3], 64)
 		if(err != nil){
-			//_= stub.PutState("str", []byte("args[3] parse error"))
-			//return nil,nil
 			return nil, errors.New("Error while converting args[2] to float")
 		}
 		
 		tradeId := args[0]
+		quoteID := args[1]
 		
 		// get bank's enrollment id
 		bytes, err := stub.GetCallerCertificate();
 		if(err != nil){
-			//_= stub.PutState("str", []byte("caller certificate error"))
-			//return nil,nil
 			return nil, errors.New("Error while getting caller certificate")
 		}
 		x509Cert, err := x509.ParseCertificate(bytes);
 		if(err != nil){
-			//_= stub.PutState("str", []byte("certificate parse error"))
-			//return nil,nil
 			return nil, errors.New("Error while parsing caller certificate")
 		}		
 		
-		// tradeID
-		rfqbyte,err := stub.GetState(tradeId)												
+		// get information from requestForQuote transaction
+		rfqbyte,err := stub.GetState(quoteID)												
 		if(err != nil){
 			return nil, errors.New("Error while rfq transaction from ledger")
 		}
@@ -316,7 +300,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling rfq data")
 		}
-				
+		
 		tid = tid + 1
 		
 		t := Transaction{
@@ -330,7 +314,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		Quantity:	rfq.Quantity,					// get from rfq
 		OptionPrice: price,							// based on input
 		StockRate: rate,							// based on input
-		SettlementDate: args[3],					// based on input
+		SettlementDate: args[4],					// based on input
 		}
 
 		// convert to JSON
@@ -340,31 +324,154 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		if err == nil {
 			err = stub.PutState(t.TransactionID,b)
 			if(err != nil){
-				//_= stub.PutState("str", []byte("transaction putState error"))
-				//return nil,nil
 				return nil, errors.New("Error while writing Response transaction to ledger")
 			}
 		} else {
-			//_= stub.PutState("str", []byte("json marshalling error"))
-			//return nil,nil
 			return nil, errors.New("Json Marshalling error")
 		}
 		
 		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
 		if(err != nil){
-			//_= stub.PutState("str", []byte("write currentTransactionNum error"))
-			//return nil,nil
 			return nil, errors.New("Error while writing currentTransactionNum to ledger")
 		}
 
+		// update trade status
+		err = stub.PutState(tradeID, []byte("Responded"))
+		if(err != nil){
+			return nil, errors.New("Error while updating trade status")
+		}
+		
 		return nil, nil
 	}
 	return nil, errors.New("Incorrect number of arguments")
 }
+/*			arg 0	:	TradeId
+			arg 1	:	Selected quote's TransactionID
+*/
 func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	return nil,nil
+	if len(args)== 2 {
+		ctidByte, err := stub.GetState("currentTransactionNum")
+		if(err != nil){
+			return nil, errors.New("Error while getting currentTransactionNum from ledger")
+		}
+		
+		tid,err := strconv.Atoi(string(ctidByte))
+		if(err != nil){
+			return nil, errors.New("Error while converting ctidByte to integer")
+		}		
+		
+		tradeId := args[0]
+		quoteId := args[1]
+		
+		// get bank's enrollment id
+		bytes, err := stub.GetCallerCertificate();
+		if(err != nil){
+			return nil, errors.New("Error while getting caller certificate")
+		}
+		x509Cert, err := x509.ParseCertificate(bytes);
+		if(err != nil){
+			return nil, errors.New("Error while parsing caller certificate")
+		}		
+		
+		// get information from selected quote
+		quotebyte,err := stub.GetState(quoteId)												
+		if(err != nil){
+			return nil, errors.New("Error while getting quote transaction from ledger")
+		}
+		var quote Transaction
+		err = json.Unmarshal(quotebyte, &quote)		
+		if(err != nil){
+			return nil, errors.New("Error while unmarshalling quote data")
+		}
+		
+		tid = tid + 1
+		
+		t := Transaction{
+		TransactionID: "trans"+strconv.Itoa(tid),
+		TradeId: tradeId,							// based on input
+		TransactionType: "EXEC",
+		OptionType: quote.OptionType,				// get from quote transaction
+		ClientID: x509Cert.Subject.CommonName,		// get from quote transaction
+		BankID: quote.BankID,						// get from quote transaction
+		StockSymbol: quote.StockSymbol,				// get from quote transaction
+		Quantity:	quote.Quantity,					// get from quote transaction
+		OptionPrice: quote.OptionPrice,				// get from quote transaction
+		StockRate: quote.StockRate,					// get from quote transaction
+		SettlementDate: quote.SettlementDate,		// get from quote transaction
+		}
+
+		// convert to JSON
+		b, err := json.Marshal(t)
+		
+		// write to ledger
+		if err == nil {
+			err = stub.PutState(t.TransactionID,b)
+			if(err != nil){
+				return nil, errors.New("Error while writing Response transaction to ledger")
+			}
+		} else {
+			return nil, errors.New("Json Marshalling error")
+		}
+		
+		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
+		if(err != nil){
+			return nil, errors.New("Error while writing currentTransactionNum to ledger")
+		}
+		
+		// update trade status
+		err = stub.PutState(tradeID, []byte("Trade executed"))
+		if(err != nil){
+			return nil, errors.New("Error while updating trade status")
+		}
+		
+		// update client entity's options
+		clientbyte,err := stub.GetState("entity1")																			//  <<<<------------- use client's id from transaction								
+		if(err != nil){
+			return nil, errors.New("Error while getting client info from ledger")
+		}
+		var client Entity
+		err = json.Unmarshal(clientbyte, &client)		
+		if(err != nil){
+			return nil, errors.New("Error while unmarshalling client data")
+		}
+		// add option to clients data
+		client
+		
+		
+		return nil, nil
+	}
+	return nil, errors.New("Incorrect number of arguments")
 }
 func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+		// update trade status
+		err = stub.PutState(tradeID, []byte("Trade Settled"))
+		if(err != nil){
+			return nil, errors.New("Error while updating trade status")
+		}	
+		
+		
+	// update client entity's portfolio
+	
+	
+
+	// update client entity's portfolio
+		
+		
+		
+		
 	return nil,nil
 }
 func (t *SimpleChaincode) getEntityState(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
