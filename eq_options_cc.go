@@ -256,7 +256,7 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 
 	_= stub.PutState("str1", []byte("inside resp"))
-	return nil, errors.New("***Returning error")
+	return nil, nil
 	
 	if len(args)== 4 {
 		
