@@ -256,30 +256,37 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 
 	_= stub.PutState("str1", []byte("inside resp"))
-	return nil, nil
-	
+		
 	if len(args)== 4 {
 		
 		_= stub.PutState("str2", []byte("inside len(args) if"))
 	
 		ctidByte, err := stub.GetState("currentTransactionNum")
 		if(err != nil){
-			return nil, errors.New("Error while getting currentTransactionNum from ledger")
+			_= stub.PutState("str", []byte("currentTransactionNum error"))
+			return nil,nil
+			//return nil, errors.New("Error while getting currentTransactionNum from ledger")
 		}
 		
 		_= stub.PutState("str3", []byte("inside len(args) if"))
 		
 		tid,err := strconv.Atoi(string(ctidByte))
 		if(err != nil){
+			_= stub.PutState("str", []byte("tid error"))
+			return nil,nil
 			return nil, errors.New("Error while converting ctidByte to integer")
 		}		
 		// get required data from input
 		rate, err := strconv.ParseFloat(args[2], 64)
 		if(err != nil){
+			_= stub.PutState("str", []byte("args[2] parse error"))
+			return nil,nil
 			return nil, errors.New("Error while converting args[2] to float")
 		}
 		price, err := strconv.ParseFloat(args[3], 64)
 		if(err != nil){
+			_= stub.PutState("str", []byte("args[3] parse error"))
+			return nil,nil
 			return nil, errors.New("Error while converting args[3] to float")
 		}
 		
@@ -288,10 +295,14 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		// get bank's enrollment id
 		bytes, err := stub.GetCallerCertificate();
 		if(err != nil){
+			_= stub.PutState("str", []byte("caller certificate error"))
+			return nil,nil
 			return nil, errors.New("Error while getting caller certificate")
 		}
 		x509Cert, err := x509.ParseCertificate(bytes);
 		if(err != nil){
+			_= stub.PutState("str", []byte("certificate parse error"))
+			return nil,nil
 			return nil, errors.New("Error while parsing caller certificate")
 		}
 		
@@ -331,14 +342,20 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		if err == nil {
 			err = stub.PutState(t.TransactionID,b)
 			if(err != nil){
+				_= stub.PutState("str", []byte("transaction putState error"))
+				return nil,nil
 				return nil, errors.New("Error while writing Response transaction to ledger")
 			}
 		} else {
+			_= stub.PutState("str", []byte("json marshalling error"))
+			return nil,nil
 			return nil, errors.New("Json Marshalling error")
 		}
 		
 		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
 		if(err != nil){
+			_= stub.PutState("str", []byte("write currentTransactionNum error"))
+			return nil,nil
 			return nil, errors.New("Error while writing currentTransactionNum to ledger")
 		}
 
