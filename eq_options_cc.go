@@ -254,10 +254,15 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 			arg 3	:	SettlementDate
 */
 func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	if len(args)== 4{
-		var str string
+	var str string
 		
-		str = "inside if"
+	str = "inside respondToQuote "+ strconv.Itoa(len(args))
+	_ = stub.PutState("str", []byte(str))
+	return []byte("within respondToQuote"), nil
+	
+	if len(args)== 4{
+		
+		str = "|| inside if"
 		err := stub.PutState("str", []byte(str))
 		
 		
