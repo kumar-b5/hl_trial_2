@@ -265,7 +265,6 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		str = "|| inside if"
 		err := stub.PutState("str", []byte(str))
 		
-		
 		ctidByte, err := stub.GetState("currentTransactionNum")
 		if(err != nil){
 			return nil, errors.New("Error while getting currentTransactionNum from ledger")
@@ -306,6 +305,8 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		str = str + "|| got bank enrollID"
 		err = stub.PutState("str", []byte(str))
 		
+		
+		/*
 		// tradeID
 		rfqbyte,err := stub.GetState(tradeId)												
 		if(err != nil){
@@ -316,8 +317,10 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling rfq data")
 		}
+		*/
 		
-		str = str + "|| got rfq data" + rfq.StockSymbol
+		
+		str = str + "|| got rfq data" //+ rfq.StockSymbol
 		err = stub.PutState("str", []byte(str))
 		
 		tid = tid + 1
@@ -326,11 +329,11 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		TransactionID: "trans"+strconv.Itoa(tid),
 		TradeId: tradeId,							// based on input
 		TransactionType: "RESP",
-		OptionType: rfq.OptionType,					// get from rfq
-		ClientID:	rfq.ClientID,					// get from rfq
+		OptionType: " ", //rfq.OptionType,					// get from rfq
+		ClientID:	" ", //rfq.ClientID,					// get from rfq
 		BankID: x509Cert.Subject.CommonName,		// enrollmentID
-		StockSymbol: rfq.StockSymbol,				// get from rfq
-		Quantity:	rfq.Quantity,					// get from rfq
+		StockSymbol: " ", //rfq.StockSymbol,				// get from rfq
+		Quantity:	0, //rfq.Quantity,					// get from rfq
 		OptionPrice: price,							// based on input
 		StockRate: rate,							// based on input
 		SettlementDate: args[3],					// based on input
@@ -348,7 +351,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 			if(err != nil){
 				return nil, errors.New("Error while writing Response transaction to ledger")
 			}
-		}else {
+		} else {
 			return nil, errors.New("Json Marshalling error")
 		}
 		
