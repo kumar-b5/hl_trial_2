@@ -68,7 +68,6 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
     } else {
 		return nil, err
 	}
-	
 	bank1:= Entity{
 		EntityId: "entity2",
 		EntityName:	"Bank A",
@@ -80,7 +79,6 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
     } else {
 		return nil, err
 	}
-	
 	bank2:= Entity{
 		EntityId: "entity3",
 		EntityName:	"Bank B",
@@ -92,14 +90,12 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
     } else {
 		return nil, err
 	}
-	
 	/*
 	_, err = stub.GetState("currentTransactionID")
     if err != nil {
         err = stub.PutState("currentTransactionID", []byte("0"))
     }
 	*/
-	
 	err = stub.PutState("currentTransactionID", []byte("1000"))
 	if(err != nil){
 		return nil, errors.New("Error while putting currentTransactionID from ledger")
