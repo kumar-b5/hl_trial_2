@@ -497,7 +497,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		t := Transaction{
 		TransactionID: "trans"+strconv.Itoa(tid),
 		TradeID: tradeId,							// based on input
-		TransactionType: "EXEC",
+		TransactionType: "SET",
 		OptionType: tExec.OptionType,				// get from tradeExec transaction
 		ClientID: x509Cert.Subject.CommonName,		// get from tradeExec transaction
 		BankID: tExec.BankID,						// get from tradeExec transaction
@@ -541,6 +541,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		for i := 0; i< len(client.Options); i++ {
 			if client.Options[i].TradeID == t.TradeID {
 				copyFlag = true
+				i++
 			}
 			if copyFlag == true {
 				client.Options[i-1]=client.Options[i]
@@ -550,10 +551,10 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 	
 		// add stock to clients portfolio, check if stock already exists if yes increase quantity else create new stock entry 		
 		stockExistFlag := false
-		for i := 0; i< len(client.Options); i++ {
-			if client.Options[i].Symbol == t.StockSymbol {
+		for i := 0; i< len(client.Portfolio); i++ {
+			if client.Portfolio[i].Symbol == t.StockSymbol {
 				stockExistFlag = true
-				client.Options[i].Quantity = client.Options[i].Quantity + t.Quantity
+				client.Portfolio[i].Quantity = client.Portfolio[i].Quantity + t.Quantity
 				break
 			}
 		}	
