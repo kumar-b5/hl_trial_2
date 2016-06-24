@@ -455,22 +455,20 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 }
 /*			arg 0	:	TradeID
 			arg 1	:	Trade execution's TransactionID
+			arg 2	:	Yes/ No
 */
 func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 2 {
 		ctidByte, err := stub.GetState("currentTransactionNum")
 		if(err != nil){
 			return nil, errors.New("Error while getting currentTransactionNum from ledger")
-		}
-		
+		}		
 		tid,err := strconv.Atoi(string(ctidByte))
 		if(err != nil){
 			return nil, errors.New("Error while converting ctidByte to integer")
 		}		
-		
 		tradeId := args[0]
 		tExecId := args[1]
-		
 		// get client's enrollment id
 		bytes, err := stub.GetCallerCertificate();
 		if(err != nil){
@@ -480,7 +478,6 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		if(err != nil){
 			return nil, errors.New("Error while parsing caller certificate")
 		}
-		
 		// get information from trade exec transaction
 		tbyte,err := stub.GetState(tExecId)												
 		if(err != nil){
@@ -491,7 +488,6 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling tradeExec data")
 		}
-		
 		tid = tid + 1
 		
 		t := Transaction{
@@ -541,7 +537,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		for i := 0; i< len(client.Options); i++ {
 			if client.Options[i].TradeID == t.TradeID {
 				copyFlag = true
-				i++
+				continue
 			}
 			if copyFlag == true {
 				client.Options[i-1]=client.Options[i]
@@ -569,8 +565,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			err = stub.PutState(client.EntityID,b)
 		} else {
 			return nil, err
-		}		
-		
+		}
 		// update banks stock data
 		bankbyte,err := stub.GetState("entity2")																			//  <<<<------------- use bank's id from transaction								
 		if(err != nil){
@@ -581,7 +576,6 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling bank data")
 		}
-		
 		for i := 0; i< len(bank.Portfolio); i++ {
 			if bank.Portfolio[i].Symbol == t.StockSymbol {
 				bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity - t.Quantity
@@ -595,13 +589,11 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		} else {
 			return nil, err
 		}
-		
 		// update trade status
 		err = stub.PutState(tradeId, []byte("Trade Settled"))
 		if(err != nil){
 			return nil, errors.New("Error while updating trade status")
 		}
-		
 		return nil, nil
 	}
 	return nil, errors.New("Incorrect number of arguments")
@@ -630,3 +622,16 @@ func (t *SimpleChaincode) getValue(stub *shim.ChaincodeStub, args []string) ([]b
 	}
     return byteVal, nil
 }
+
+// read all transactions for a particular user
+func (t *SimpleChaincode) readTransactionsOfUser(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	byteVal,err := stub.GetState(args[0])
+	if err != nil {
+		return []byte(err.Error()), errors.New("Error retrieving key "+args[0])
+	}
+	if len(byteVal) == 0 {
+		return []byte("Len is zero"), nil
+	}
+    return byteVal, nil
+}
+
