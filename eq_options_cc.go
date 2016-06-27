@@ -50,8 +50,8 @@ type Transaction struct{		// ledger transactions
 }
 
 const entity1 = "user_type1_708e3151c7"
-const entity2 = "user_type1_708e3151c7"
-const entity3 = "user_type1_708e3151c7"
+const entity2 = "user_type1_5992b632c1"
+const entity3 = "user_type1_6e041a6873"
 //const entity4 = "user_type1_708e3151c7"
 
 type SimpleChaincode struct {
@@ -366,10 +366,9 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		}
 		
 		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
-		if(err != nil){
+		if err != nil {
 			return nil, errors.New("Error while writing currentTransactionNum to ledger")
 		}
-
 		
 		// updating client and bank transaction history 
 		err = updateTransactionHistory(stub, t.ClientID, t.TransactionID)
@@ -383,7 +382,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		
 		// update trade status
 		err = stub.PutState(tradeId, []byte("Responded"))
-		if(err != nil){
+		if err != nil {
 			return nil, errors.New("Error while updating trade status")
 		}
 		
@@ -398,12 +397,12 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 2 {
 		ctidByte, err := stub.GetState("currentTransactionNum")
-		if(err != nil){
+		if err != nil {
 			return nil, errors.New("Error while getting currentTransactionNum from ledger")
 		}
 		
 		tid,err := strconv.Atoi(string(ctidByte))
-		if(err != nil){
+		if err != nil {
 			return nil, errors.New("Error while converting ctidByte to integer")
 		}		
 		
