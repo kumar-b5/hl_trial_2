@@ -512,32 +512,51 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 			arg 1	:	Trade execution's TransactionID
 			arg 2	:	Yes/ No
 */
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 3 {
 		tradeId := args[0]
 		tExecId := args[1]
 		
+		//*************
+		err := stub.PutState("tradeSet", []byte("inside if len args 3"))
+		//*************
+		
 		// get client's enrollment id
 		bytes, err := stub.GetCallerCertificate();
 		if(err != nil){
-			return nil, errors.New("Error while getting caller certificate")
+			return nil, nil//errors.New("Error while getting caller certificate")
 		}
 		x509Cert, err := x509.ParseCertificate(bytes);
 		if(err != nil){
-			return nil, errors.New("Error while parsing caller certificate")
+			return nil, nil//errors.New("Error while parsing caller certificate")
 		}
 		
 		clientID := x509Cert.Subject.CommonName
+		
+		//*************
+		err = stub.PutState("tradeSet", []byte("got client certificate"))
+		//*************
+		
+		
 		// update client entity's options
 		clientbyte,err := stub.GetState(clientID)																												
 		if(err != nil){
-			return nil, errors.New("Error while getting client info from ledger")
+			return nil, nil//errors.New("Error while getting client info from ledger")
 		}
 		var client Entity
 		err = json.Unmarshal(clientbyte, &client)		
 		if(err != nil){
-			return nil, errors.New("Error while unmarshalling client data")
+			return nil, nil//errors.New("Error while unmarshalling client data")
 		}
+		
+		
+		//*************
+		err = stub.PutState("tradeSet", []byte("got client entity state"))
+		//*************
+		
+		
 		// remove option from clients data, check tradeID
 		copyFlag := false
 		for i := 0; i< len(client.Options); i++ {
@@ -551,30 +570,56 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		}
 		client.Options = client.Options[:len(client.Options)-1]
 		
+		//*************
+		err = stub.PutState("tradeSet", []byte("option removed from client state"))
+		//*************
+		
 		// check if trade has to be settled
 		if strings.ToLower(args[2]) == "yes" {
+			
+			//*************
+		err = stub.PutState("tradeSet", []byte("trade settled yes"))
+		//*************
+			
 			ctidByte, err := stub.GetState("currentTransactionNum")
 			if(err != nil){
-				return nil, errors.New("Error while getting currentTransactionNum from ledger")
+				return nil, nil//errors.New("Error while getting currentTransactionNum from ledger")
 			}		
+			
+			
+			
 			tid,err := strconv.Atoi(string(ctidByte))
 			if(err != nil){
-				return nil, errors.New("Error while converting ctidByte to integer")
+				return nil, nil//errors.New("Error while converting ctidByte to integer")
 			}		
 			
 			// get information from trade exec transaction
 			tbyte,err := stub.GetState(tExecId)												
 			if(err != nil){
-				return nil, errors.New("Error while getting tradeExec transaction from ledger")
+				return nil, nil//errors.New("Error while getting tradeExec transaction from ledger")
 			}
+			
+			//*************
+		err = stub.PutState("tradeSet", []byte("got transaction state"))
+		//*************
+			
 			var tExec Transaction
 			err = json.Unmarshal(tbyte, &tExec)		
 			if(err != nil){
-				return nil, errors.New("Error while unmarshalling tradeExec data")
+				return nil, nil//errors.New("Error while unmarshalling tradeExec data")
 			}
 			
+			//*************
+		err = stub.PutState("tradeSet", []byte("unmarshalled transaction state"))
+		//*************
+			
 			// check settlement date to see if option is still valid
-			if tExec.SettlementDate.Before(time.Now()) {																
+			if tExec.SettlementDate.Before(time.Now()) {		
+
+				//*************
+		err = stub.PutState("tradeSet", []byte("settlement date < now"))
+		//*************
+				
 				tid = tid + 1
 				t := Transaction{
 				TransactionID: "trans"+strconv.Itoa(tid),
@@ -597,16 +642,24 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				if err == nil {
 					err = stub.PutState(t.TransactionID,b)
 					if(err != nil){
-						return nil, errors.New("Error while writing Response transaction to ledger")
+						return nil, nil//errors.New("Error while writing Response transaction to ledger")
 					}
 				} else {
-					return nil, errors.New("Json Marshalling error")
+					return nil, nil//errors.New("Json Marshalling error")
 				}
+				
+				//*************
+		err = stub.PutState("tradeSet", []byte("transaction written to ledger"))
+		//*************
 				
 				err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
 				if(err != nil){
-					return nil, errors.New("Error while writing currentTransactionNum to ledger")
+					return nil, nil//errors.New("Error while writing currentTransactionNum to ledger")
 				}
+				
+				//*************
+		err = stub.PutState("tradeSet", []byte("transaction num updated"))
+		//*************
 				
 				// add stock to clients portfolio, check if stock already exists if yes increase quantity else create new stock entry 		
 				stockExistFlag := false
@@ -623,22 +676,36 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					client.Portfolio = append(client.Portfolio,newStock)
 				}
 				
+				//*************
+		err = stub.PutState("tradeSet", []byte("stock added to client portfolio"))
+		//*************
+				
 				// update banks stock data
 				bankbyte,err := stub.GetState(t.BankID)																											
 				if(err != nil){
-					return nil, errors.New("Error while getting bank info from ledger")
+					return nil, nil//errors.New("Error while getting bank info from ledger")
 				}
 				var bank Entity
 				err = json.Unmarshal(bankbyte, &bank)		
 				if(err != nil){
-					return nil, errors.New("Error while unmarshalling bank data")
+					return nil, nil//errors.New("Error while unmarshalling bank data")
 				}
+				
+				//*************
+		err = stub.PutState("tradeSet", []byte("got bank entity state"))
+		//*************
+				
 				for i := 0; i< len(bank.Portfolio); i++ {
 					if bank.Portfolio[i].Symbol == t.StockSymbol {
 						bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity - t.Quantity
 						break
 					}
 				}
+				
+				//*************
+		err = stub.PutState("tradeSet", []byte("changed bank's stock quantity"))
+		//*************
+				
 				// update bank state
 				b, err = json.Marshal(bank)
 				if err == nil {
@@ -647,47 +714,84 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					return nil, err
 				}
 				
+				//*************
+		err = stub.PutState("tradeSet", []byte("bank state updated"))
+		//*************
 				// updating client and bank transaction history 
 				err = updateTransactionHistory(stub, t.ClientID, t.TransactionID)
 				if err != nil {
-					return nil, errors.New("Error while updating client's transaction history")
+					return nil, nil//errors.New("Error while updating client's transaction history")
 				}
 				err = updateTransactionHistory(stub, t.BankID, t.TransactionID)
 				if err != nil {
-					return nil, errors.New("Error while updating bank's transaction history")
+					return nil, nil//errors.New("Error while updating bank's transaction history")
 				}
+				
+				//*************
+		err = stub.PutState("tradeSet", []byte("updating bank and client transaction history"))
+		//*************
 				
 				
 				// update trade status
 				err = stub.PutState(tradeId, []byte("Trade Settled"))
 				if(err != nil){
-					return nil, errors.New("Error while updating trade status")
+					return nil, nil//errors.New("Error while updating trade status")
 				}
+				
+				//*************
+		err = stub.PutState("tradeSet", []byte("updated trade history"))
+		//*************
+				
+				
 			} else {	// trade expired
+			
+			//*************
+		err = stub.PutState("tradeSet", []byte("trade expired"))
+		//*************
 				// update trade status
 				err = stub.PutState(tradeId, []byte("Trade Expired"))
 				if(err != nil){
-					return nil, errors.New("Error while updating trade status")
+					return nil, nil//errors.New("Error while updating trade status")
 				}
+				
+				//*************
+		err = stub.PutState("tradeSet", []byte("updateTransactionHistory in expired"))
+		//*************
+				
 			}
-		} else {	// trade cancelled			
+		} else {	// trade cancelled		
+//*************
+		err = stub.PutState("tradeSet", []byte("trade cancelled"))
+		//*************		
 			// update trade status
 			err = stub.PutState(tradeId, []byte("Trade Cancelled"))
 			if(err != nil){
-				return nil, errors.New("Error while updating trade status")
+				return nil, nil//errors.New("Error while updating trade status")
 			}
+			//*************
+		err = stub.PutState("tradeSet", []byte("updateTransactionHistory in cancelled"))
+		//*************
 		}
+		
+		//*************
+		err = stub.PutState("tradeSet", []byte("client state updated"))
+		//*************
 		// update client state
 		b, err := json.Marshal(client)
 		if err == nil {
 			err = stub.PutState(client.EntityID,b)
 		} else {
-			return nil, err
+			return nil, nil//err
 		}
 		return nil, nil
 	}
-	return nil, errors.New("Incorrect number of arguments")
+	//*************
+		_ = stub.PutState("tradeSet", []byte("Incorrect number of arguments"))
+		//*************
+	return nil, nil//errors.New("Incorrect number of arguments")
 }
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // get user id
 func (t *SimpleChaincode) getUserID(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	bytes, err := stub.GetCallerCertificate()
