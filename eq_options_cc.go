@@ -613,6 +613,12 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		err = stub.PutState("tradeSet", []byte("unmarshalled transaction state"))
 		//*************
 			
+			
+					//*************
+		err = stub.PutState("timeNow", []byte(time.Now().String()))
+		//*************	
+			
+			
 			// check settlement date to see if option is still valid
 			if tExec.SettlementDate.Before(time.Now()) {		
 
@@ -871,6 +877,10 @@ func updateTransactionHistory(stub *shim.ChaincodeStub, entityID string, transac
 
 func (t *SimpleChaincode) trial(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 
-	return nil, errors.New("********** trial function error ************")
+	//*************
+		_ = stub.PutState("timeNow", []byte(time.Now().String()))
+		//*************	
+		//*************	
+	return []byte(time.Now().String()), nil
 
 }
