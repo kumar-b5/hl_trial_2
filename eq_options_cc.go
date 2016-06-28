@@ -520,7 +520,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		tExecId := args[1]
 		
 		//*************
-		err := stub.PutState("tradeSet", []byte("inside if len args 3"))
+		err := stub.PutState("tradeSet1", []byte("inside if len args 3"))
 		//*************
 		
 		// get client's enrollment id
@@ -536,7 +536,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		clientID := x509Cert.Subject.CommonName
 		
 		//*************
-		err = stub.PutState("tradeSet", []byte("got client certificate"))
+		err = stub.PutState("tradeSet1", []byte("got client certificate"))
 		//*************
 		
 		
@@ -553,7 +553,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		
 		
 		//*************
-		err = stub.PutState("tradeSet", []byte("got client entity state"))
+		err = stub.PutState("tradeSet1", []byte("got client entity state"))
 		//*************
 		
 		
@@ -571,14 +571,14 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		client.Options = client.Options[:len(client.Options)-1]
 		
 		//*************
-		err = stub.PutState("tradeSet", []byte("option removed from client state"))
+		err = stub.PutState("tradeSet1", []byte("option removed from client state"))
 		//*************
 		
 		// check if trade has to be settled
 		if strings.ToLower(args[2]) == "yes" {
 			
 			//*************
-		err = stub.PutState("tradeSet", []byte("trade settled yes"))
+		err = stub.PutState("tradeSet2", []byte("trade settled yes"))
 		//*************
 			
 			ctidByte, err := stub.GetState("currentTransactionNum")
@@ -600,7 +600,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			}
 			
 			//*************
-		err = stub.PutState("tradeSet", []byte("got transaction state"))
+		err = stub.PutState("tradeSet2", []byte("got transaction state"))
 		//*************
 			
 			var tExec Transaction
@@ -610,20 +610,15 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			}
 			
 			//*************
-		err = stub.PutState("tradeSet", []byte("unmarshalled transaction state"))
+		err = stub.PutState("tradeSet2", []byte("unmarshalled transaction state"))
 		//*************
-			
-			
-					//*************
-		err = stub.PutState("timeNow", []byte(time.Now().String()))
-		//*************	
-			
+	
 			
 			// check settlement date to see if option is still valid
-			if tExec.SettlementDate.Before(time.Now()) {		
+			if time.Now().Before(tExec.SettlementDate) {		
 
 				//*************
-		err = stub.PutState("tradeSet", []byte("settlement date < now"))
+		err = stub.PutState("tradeSet3", []byte("settlement date > now"))
 		//*************
 				
 				tid = tid + 1
@@ -655,7 +650,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("transaction written to ledger"))
+		err = stub.PutState("tradeSet3", []byte("transaction written to ledger"))
 		//*************
 				
 				err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
@@ -664,7 +659,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("transaction num updated"))
+		err = stub.PutState("tradeSet3", []byte("transaction num updated"))
 		//*************
 				
 				// add stock to clients portfolio, check if stock already exists if yes increase quantity else create new stock entry 		
@@ -683,7 +678,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("stock added to client portfolio"))
+		err = stub.PutState("tradeSet3", []byte("stock added to client portfolio"))
 		//*************
 				
 				// update banks stock data
@@ -698,7 +693,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("got bank entity state"))
+		err = stub.PutState("tradeSet3", []byte("got bank entity state"))
 		//*************
 				
 				for i := 0; i< len(bank.Portfolio); i++ {
@@ -709,7 +704,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("changed bank's stock quantity"))
+		err = stub.PutState("tradeSet3", []byte("changed bank's stock quantity"))
 		//*************
 				
 				// update bank state
@@ -721,7 +716,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("bank state updated"))
+		err = stub.PutState("tradeSet3", []byte("bank state updated"))
 		//*************
 				// updating client and bank transaction history 
 				err = updateTransactionHistory(stub, t.ClientID, t.TransactionID)
@@ -734,7 +729,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("updating bank and client transaction history"))
+		err = stub.PutState("tradeSet3", []byte("updating bank and client transaction history"))
 		//*************
 				
 				
@@ -745,14 +740,14 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("updated trade history"))
+		err = stub.PutState("tradeSet3", []byte("updated trade history"))
 		//*************
 				
 				
 			} else {	// trade expired
 			
 			//*************
-		err = stub.PutState("tradeSet", []byte("trade expired"))
+		err = stub.PutState("tradeSet4", []byte("trade expired"))
 		//*************
 				// update trade status
 				err = stub.PutState(tradeId, []byte("Trade Expired"))
@@ -761,13 +756,13 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				//*************
-		err = stub.PutState("tradeSet", []byte("updateTransactionHistory in expired"))
+		err = stub.PutState("tradeSet4", []byte("updateTransactionHistory in expired"))
 		//*************
 				
 			}
 		} else {	// trade cancelled		
 //*************
-		err = stub.PutState("tradeSet", []byte("trade cancelled"))
+		err = stub.PutState("tradeSet5", []byte("trade cancelled"))
 		//*************		
 			// update trade status
 			err = stub.PutState(tradeId, []byte("Trade Cancelled"))
@@ -775,12 +770,12 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				return nil, nil//errors.New("Error while updating trade status")
 			}
 			//*************
-		err = stub.PutState("tradeSet", []byte("updateTransactionHistory in cancelled"))
+		err = stub.PutState("tradeSet5", []byte("updateTransactionHistory in cancelled"))
 		//*************
 		}
 		
 		//*************
-		err = stub.PutState("tradeSet", []byte("client state updated"))
+		err = stub.PutState("tradeSet6", []byte("client state updated"))
 		//*************
 		// update client state
 		b, err := json.Marshal(client)
@@ -792,7 +787,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		return nil, nil
 	}
 	//*************
-		_ = stub.PutState("tradeSet", []byte("Incorrect number of arguments"))
+		_ = stub.PutState("tradeSet7", []byte("Incorrect number of arguments"))
 		//*************
 	return nil, nil//errors.New("Incorrect number of arguments")
 }
