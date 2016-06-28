@@ -125,8 +125,10 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
         return t.tradeExec(stub, args)
     } else if function == "tradeSet" {
         return t.tradeSet(stub, args)
-    } 
-	
+    } else if function == "trial" {
+        return t.trial(stub, args)
+    }
+
     fmt.Println("invoke did not find func: " + function)
     return nil, errors.New("Received unknown function invocation")
 }
@@ -145,6 +147,8 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
         return t.getValue(stub, args)
 	}	else if function == "readTransactionIDsOfUser" {
         return t.readTransactionIDsOfUser(stub, args)
+    }	else if function == "trial" {
+        return t.trial(stub, args)
     }
 	fmt.Println("query did not find func: " + function)
     return nil, errors.New("Received unknown function query")
@@ -495,7 +499,6 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 			return nil, errors.New("Error while updating bank's transaction history")
 		}
 		
-		
 		// update trade status
 		err = stub.PutState(tradeId, []byte("Trade executed"))
 		if(err != nil){
@@ -732,7 +735,7 @@ func (t *SimpleChaincode) readTransactionIDsOfUser(stub *shim.ChaincodeStub, arg
 		*/
 		b, err := json.Marshal(entity.TransactionHistory)
 		if err != nil {
-			return nil, errors.New("Error while marshalling transactio history")
+			return nil, errors.New("Error while marshalling transaction history")
 		}
 		return b, nil
 	}
@@ -760,4 +763,10 @@ func updateTransactionHistory(stub *shim.ChaincodeStub, entityID string, transac
 		return errors.New("Error while updating entity status")
 	}
 	return nil
+}
+
+func (t *SimpleChaincode) trial(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+
+	return nil, errors.New("********** trial function error ************")
+
 }
