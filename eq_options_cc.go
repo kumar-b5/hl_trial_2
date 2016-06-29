@@ -122,6 +122,8 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
         return t.tradeExec(stub, args)
     } else if function == "tradeSet" {
         return t.tradeSet(stub, args)
+    } else if function == "trial" {
+        return t.trial(stub, args)
     } 
     fmt.Println("invoke did not find func: " + function)
     return nil, errors.New("Received unknown function invocation")
@@ -781,5 +783,5 @@ func updateTransactionHistory(stub *shim.ChaincodeStub, entityID string, transac
 	return nil
 }
 func (t *SimpleChaincode) trial(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	return []byte(time.Now().String()), errors.New("********* TRIAL ERROR *********")
+	return nil, errors.New("********* TRIAL ERROR *********")
 }
