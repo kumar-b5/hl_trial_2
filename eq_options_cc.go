@@ -154,7 +154,10 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
         return t.getValue(stub, args)
 	}	else if function == "readTradeIDsOfUser" {
         return t.readTradeIDsOfUser(stub, args)
+    }	else if function == "readTrades" {
+        return t.readTrades(stub, args)
     }	
+
 	fmt.Println("query did not find func: " + function)
     return nil, errors.New("Received unknown function query")
 }
@@ -319,7 +322,7 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 */
 func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 7 {
-		tradeId := args[0]
+		tradeID := args[0]
 		quoteID := args[1]
 		
 		// get bank's enrollment id
@@ -408,7 +411,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		tid = tid + 1
 		t := Transaction {
 		TransactionID: "trans"+strconv.Itoa(tid),
-		TradeID: tradeId,																// based on input
+		TradeID: tradeID,																// based on input
 		TransactionType: "RESP",
 		OptionType: rfq.OptionType,														// get from rfq
 		ClientID:	rfq.ClientID,														// get from rfq
@@ -476,7 +479,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 			return nil, errors.New("Error while converting ctidByte to integer")
 		}		
 		
-		tradeId := args[0]
+		tradeID := args[0]
 		quoteId := args[1]
 		
 		// get client's enrollment id
@@ -513,7 +516,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		
 		t := Transaction{
 		TransactionID: "trans"+strconv.Itoa(tid),
-		TradeID: tradeId,							// based on input
+		TradeID: tradeID,							// based on input
 		TransactionType: "EXEC",
 		OptionType: quote.OptionType,				// get from quote transaction
 		ClientID: x509Cert.Subject.CommonName,		// get from quote transaction
@@ -591,7 +594,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 */
 func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 3 {
-		tradeId := args[0]
+		tradeID := args[0]
 		tExecId := args[1]
 		// get client's enrollment id
 		bytes, err := stub.GetCallerCertificate();
@@ -617,7 +620,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		// remove option from clients data, check tradeID
 		copyFlag := false
 		for i := 0; i< len(client.Options); i++ {
-			if client.Options[i].TradeID == tradeId {
+			if client.Options[i].TradeID == tradeID {
 				copyFlag = true
 				continue
 			}
@@ -661,7 +664,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				tid = tid + 1
 				t := Transaction{
 				TransactionID: "trans"+strconv.Itoa(tid),
-				TradeID: tradeId,							// based on input
+				TradeID: tradeID,							// based on input
 				TransactionType: "SET",
 				OptionType: tExec.OptionType,				// get from tradeExec transaction
 				ClientID: x509Cert.Subject.CommonName,		// get from tradeExec transaction
@@ -744,7 +747,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			} else {	// trade expired
 				
 				// updating trade state
-				err = updateTradeState(stub, tradeId,"" ,"Trade Expired")
+				err = updateTradeState(stub, tradeID,"" ,"Trade Expired")
 				if err != nil {
 					return nil, errors.New("Error while updating trade state")
 				}
@@ -758,7 +761,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			}
 		} else {	// trade cancelled
 			// updating trade state
-			err = updateTradeState(stub, tradeId,"" ,"Trade Cancelled")
+			err = updateTradeState(stub, tradeID,"" ,"Trade Cancelled")
 			if err != nil {
 				return nil, errors.New("Error while updating trade state")
 			}
@@ -910,3 +913,36 @@ func (t *SimpleChaincode) readTradeHistory(stub *shim.ChaincodeStub, args []stri
 	return nil, errors.New("Incorrect number of arguments")
 }
 */
+
+// read trades of a client
+func (t *SimpleChaincode) readTrades(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	if len(args)== 1 {
+		// read entity state
+		entitybyte,err := stub.GetState(args[0])																									
+		if err != nil {
+			return nil, errors.New("Error while getting entity info from ledger")
+		}
+		var entity Entity
+		err = json.Unmarshal(entitybyte, &entity)		
+		if(err != nil){
+			return nil, errors.New("Error while unmarshalling entity data")
+		}
+		trades := make([]Trade,len(entity.TradeHistory))
+		for i:=0; i<len(entity.TradeHistory); i++ {
+			byteVal,err := stub.GetState(entity.TradeHistory[i])
+			if err != nil {
+				return nil, errors.New("Error while getting trades info from ledger")
+			}
+			err = json.Unmarshal(byteVal, &trades[i])	
+			if err != nil {
+				return nil, errors.New("Error while unmarshalling trades")
+			}	
+		}
+		b, err := json.Marshal(trades)
+		if err != nil {
+			return nil, errors.New("Error while marshalling trades")
+		}
+		return b, nil
+	}
+	return nil, errors.New("Incorrect number of arguments")
+}
