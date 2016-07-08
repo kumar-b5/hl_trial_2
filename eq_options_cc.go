@@ -321,6 +321,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 	if len(args)== 7 {
 		tradeId := args[0]
 		quoteID := args[1]
+		
 		// get bank's enrollment id
 		bytes, err := stub.GetCallerCertificate();
 		if(err != nil){
@@ -340,6 +341,11 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling rfq data")
 		}
+		
+		if rfq.TradeID != tradeID {
+			return nil, errors.New("Mismatch in tradeIDs")	
+		}		
+		
 		// check if bank has required stock quantity 
 		bankbyte,err := stub.GetState(x509Cert.Subject.CommonName)																											
 		if(err != nil){
@@ -494,6 +500,9 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 			return nil, errors.New("Error while unmarshalling quote data")
 		}
 		
+		if quote.TradeID != tradeID {
+			return nil, errors.New("Mismatch in tradeIDs")	
+		}
 		
 		// check if settlement Date is greater than current date
 		if quote.SettlementDate.Before(time.Now()) {
@@ -643,6 +652,10 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				return nil, errors.New("Error while unmarshalling tradeExec data")
 			}
 
+			if tExec.TradeID != tradeID {
+			return nil, errors.New("Mismatch in tradeIDs")	
+			}
+			
 			// check settlement date to see if option is still valid
 			if time.Now().Before(tExec.SettlementDate) {
 				tid = tid + 1
