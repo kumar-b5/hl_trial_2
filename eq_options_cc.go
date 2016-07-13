@@ -170,22 +170,15 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
     return nil, errors.New("Received unknown function query")
 }
 func (t *SimpleChaincode) readEntity(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-    var name, jsonResp string
+    var jsonResp string
     var err error
 	var valAsbytes []byte
     if len(args) != 1 {
-        return nil, errors.New("Incorrect number of arguments. Expecting name of the entity")
+        return nil, errors.New("Incorrect number of arguments. Expecting entity ID")
     }
-    name = args[0]
-	if name == "client" {
-		valAsbytes, err = stub.GetState(entity1)
-	} else if name == "bank1" {
-		valAsbytes, err = stub.GetState(entity2)
-	} else if name == "bank2" {
-		valAsbytes, err = stub.GetState(entity3)
-	}
+	valAsbytes, err = stub.GetState(args[0])
     if err != nil {
-        jsonResp = "{\"Error\":\"Failed to get state for " + name + "\"}"
+        jsonResp = "{\"Error\":\"Failed to get state for " + args[0] + "\"}"
         return nil, errors.New(jsonResp)
     }
     return valAsbytes, nil
@@ -592,7 +585,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling bank data")
 		}
-		newOption = Option{Symbol: t.StockSymbol,Quantity: t.Quantity,OptionType: bankOptionType ,StockRate: t.StockRate ,SettlementDate: t.SettlementDate,OptionPrice: t.OptionPrice, EntityID: t.BankID, TradeID:t.TradeID}
+		newOption = Option{Symbol: t.StockSymbol,Quantity: t.Quantity,OptionType: bankOptionType ,StockRate: t.StockRate ,SettlementDate: t.SettlementDate,OptionPrice: t.OptionPrice, EntityID: t.ClientID, TradeID:t.TradeID}
 		bank.Options = append(bank.Options,newOption)
 		
 		b, err = json.Marshal(bank)
@@ -666,11 +659,57 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				client.Options[i-1]=client.Options[i]
 			}
 		}
-		client.Options = client.Options[:len(client.Options)-1]
-
+		client.Options = client.Options[:(len(client.Options)-1)]
+		
+		// get transactionID from tradeID
+		tradebyte,err := stub.GetState(tradeID)
+		if err != nil {
+			return nil,errors.New("Error while getting trade info from ledger")
+		}
+		var trade Trade
+		err = json.Unmarshal(tradebyte, &trade)		
+		if err != nil {
+			return nil,errors.New("Error while unmarshalling trade data")
+		}
+		tExecId := trade.TransactionHistory[len(trade.TransactionHistory)-1]
+		
+		// get information from trade exec transaction
+		tbyte,err := stub.GetState(tExecId)												
+		if(err != nil){
+			return nil, errors.New("Error while getting tradeExec transaction from ledger")
+		}
+		
+		var tExec Transaction
+		err = json.Unmarshal(tbyte, &tExec)		
+		if(err != nil){
+			return nil, errors.New("Error while unmarshalling tradeExec data")
+		}
+		
+		// update bank entity's options
+		bankbyte,err := stub.GetState(tExec.BankID)																											
+		if(err != nil){
+			return nil, errors.New("Error while getting bank info from ledger")
+		}
+		var bank Entity
+		err = json.Unmarshal(bankbyte, &bank)		
+		if(err != nil){
+			return nil, errors.New("Error while unmarshalling bank data")
+		}
+		// remove option from bank 
+		copyFlag = false
+		for i := 0; i< len(bank.Options); i++ {
+			if bank.Options[i].TradeID == tradeID {
+				copyFlag = true
+				continue
+			}
+			if copyFlag == true {
+				bank.Options[i-1]=bank.Options[i]
+			}
+		}
+		bank.Options = bank.Options[:(len(bank.Options)-1)]
+		
 		// check if trade has to be settled
 		if strings.ToLower(args[1]) == "yes" {
-
 			ctidByte, err := stub.GetState("currentTransactionNum")
 			if(err != nil){
 				return nil, errors.New("Error while getting currentTransactionNum from ledger")
@@ -680,31 +719,8 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			if(err != nil){
 				return nil, errors.New("Error while converting ctidByte to integer")
 			}		
-			// get transactionID from tradeID
 			
-			tradebyte,err := stub.GetState(tradeID)																										
-			if err != nil {
-				return nil,errors.New("Error while getting trade info from ledger")
-			}
-			var trade Trade
-			err = json.Unmarshal(tradebyte, &trade)		
-			if err != nil {
-				return nil,errors.New("Error while unmarshalling trade data")
-			}
-			tExecId := trade.TransactionHistory[len(trade.TransactionHistory)-1]
-			
-			// get information from trade exec transaction
-			tbyte,err := stub.GetState(tExecId)												
-			if(err != nil){
-				return nil, errors.New("Error while getting tradeExec transaction from ledger")
-			}
-			
-			var tExec Transaction
-			err = json.Unmarshal(tbyte, &tExec)		
-			if(err != nil){
-				return nil, errors.New("Error while unmarshalling tradeExec data")
-			}
-
+		
 			if tExec.TradeID != tradeID {
 			return nil, errors.New("Mismatch in tradeIDs")	
 			}
@@ -769,16 +785,6 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					client.Portfolio = append(client.Portfolio,newStock)
 				}
 				// update banks stock data
-				bankbyte,err := stub.GetState(t.BankID)																											
-				if(err != nil){
-					return nil, errors.New("Error while getting bank info from ledger")
-				}
-				var bank Entity
-				err = json.Unmarshal(bankbyte, &bank)		
-				if(err != nil){
-					return nil, errors.New("Error while unmarshalling bank data")
-				}
-				
 				stockExistFlag = false
 				for i := 0; i< len(bank.Portfolio); i++ {
 					if bank.Portfolio[i].Symbol == t.StockSymbol {
