@@ -18,10 +18,11 @@ type Stock struct{
 type Option struct{
 	Symbol string
 	Quantity int
+	OptionType string
 	StockRate float64
 	SettlementDate time.Time	
 	OptionPrice float64
-	BankID string
+	EntityID string
 	TradeID string
 }
 type Entity struct{
@@ -74,6 +75,7 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 	client:= Entity{		
 		EntityID: entity1,	  
 		EntityName:	"Client A",
+		EntityType: "Client",
 		Portfolio: []Stock{{Symbol:"GOOGL",Quantity:10},{Symbol:"AAPL",Quantity:20}},
 		Options: []Option{{Symbol:"AMZN",Quantity:10,SettlementDate: time.Date(2016, 07, 01, 0, 0, 0, 0, time.UTC)}},
 	}
@@ -86,6 +88,7 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 	bank1:= Entity{
 		EntityID: entity2,
 		EntityName:	"Bank A",
+		EntityType: "Bank",
 		Portfolio: []Stock{{Symbol:"MSFT",Quantity:200},{Symbol:"AAPL",Quantity:250},{Symbol:"AMZN",Quantity:400}},
 	}
 	b, err = json.Marshal(bank1)
@@ -97,6 +100,7 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 	bank2:= Entity{
 		EntityID: entity3,
 		EntityName:	"Bank B",
+		EntityType: "Bank",
 		Portfolio: []Stock{{Symbol:"GOOGL",Quantity:150},{Symbol:"AAPL",Quantity:100}},
 	}
 	b, err = json.Marshal(bank2)
@@ -560,8 +564,10 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling client data")
 		}
+		
+		// optiontype
 		// add option to clients data
-		newOption := Option{Symbol: t.StockSymbol,Quantity: t.Quantity,StockRate: t.StockRate ,SettlementDate: t.SettlementDate,OptionPrice: t.OptionPrice, BankID: t.BankID, TradeID:t.TradeID}
+		newOption := Option{Symbol: t.StockSymbol,Quantity: t.Quantity,OptionType: t.OptionType ,StockRate: t.StockRate ,SettlementDate: t.SettlementDate,OptionPrice: t.OptionPrice, EntityID: t.BankID, TradeID:t.TradeID}
 		client.Options = append(client.Options,newOption)
 		
 		b, err = json.Marshal(client)
@@ -570,6 +576,31 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		} else {
 			return nil, err
 		}		
+		
+		// add option to bank data (switch optiontype)
+		bankOptionType := "buy"
+		if t.OptionType == "buy" {
+			bankOptionType = "sell"
+		}
+		
+		bankbyte,err := stub.GetState(t.BankID)																										
+		if(err != nil){
+			return nil, errors.New("Error while getting bank info from ledger")
+		}
+		var bank Entity
+		err = json.Unmarshal(bankbyte, &bank)		
+		if(err != nil){
+			return nil, errors.New("Error while unmarshalling bank data")
+		}
+		newOption = Option{Symbol: t.StockSymbol,Quantity: t.Quantity,OptionType: bankOptionType ,StockRate: t.StockRate ,SettlementDate: t.SettlementDate,OptionPrice: t.OptionPrice, EntityID: t.BankID, TradeID:t.TradeID}
+		bank.Options = append(bank.Options,newOption)
+		
+		b, err = json.Marshal(bank)
+		if err == nil {
+			err = stub.PutState(bank.EntityID,b)
+		} else {
+			return nil, err
+		}
 		
 		// updating trade transaction history  and status
 		err = updateTradeState(stub, t.TradeID, t.TransactionID,"Trade executed")
@@ -600,7 +631,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 // check trade type buy/ sell and settle accordingly
 
 func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	if len(args)== 3 {
+	if len(args)== 2 {
 		tradeID := args[0]
 		//tExecId := args[1]
 		// get client's enrollment id
@@ -935,6 +966,7 @@ func (t *SimpleChaincode) trial(stub *shim.ChaincodeStub, args []string) ([]byte
 
 /* Function to read open requests
 	Traverses through trade log, checks trade status returns open requests
+	
 */
 
 /* Function to read open quotes
