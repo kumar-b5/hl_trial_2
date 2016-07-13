@@ -1024,7 +1024,6 @@ func (t *SimpleChaincode) readTrades(stub *shim.ChaincodeStub, args []string) ([
 }
 
 func (t *SimpleChaincode) readQuoteRequests(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-
 	var quoteTransactions []string
 	// get current Trade number
 	ctidByte, err := stub.GetState("currentTradeNum")
@@ -1050,7 +1049,33 @@ func (t *SimpleChaincode) readQuoteRequests(stub *shim.ChaincodeStub, args []str
 		// check status
 		if trade.Status == "Quote requested" {
 			quoteTransactions = append(quoteTransactions,trade.TransactionHistory[0])
-		}
+		} else if trade.Status == "Responded" { // check who has responded
+			respondedFlag := false
+			bytes, _ := stub.GetCallerCertificate()
+			x509Cert, _ := x509.ParseCertificate(bytes)
+			currentUserID := x509Cert.Subject.CommonName
+			
+			for i:=0; i< len(trade.TransactionHistory); i++ {
+				tranbyte,err := stub.GetState(trade.TransactionHistory[i])
+				if(err != nil){
+					return nil, errors.New("Error while getting transaction from ledger")
+				}
+				var tran Transaction
+				err = json.Unmarshal(tranbyte, &tran)		
+				if(err != nil){
+					return nil, errors.New("Error while unmarshalling tran data")
+				}
+				if tran.TransactionType == "RESP" {
+					if tran.BankID == currentUserID {
+						respondedFlag = true
+						break
+					}
+				}
+			}
+			if respondedFlag == false {
+				quoteTransactions = append(quoteTransactions,trade.TransactionHistory[0])
+			}
+		}	
 		tradeNum--
 	}
 	buffer := &bytes.Buffer{}
