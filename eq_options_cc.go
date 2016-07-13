@@ -8,6 +8,8 @@ import (
 	"crypto/x509"
 	"strings"
 	"time"
+	"bytes"
+ 	"encoding/gob"
 )
 type Stock struct{
 	Symbol string
@@ -25,6 +27,7 @@ type Option struct{
 type Entity struct{
 	EntityID string				// enrollmentID
 	EntityName string
+	EntityType string
 	Portfolio []Stock
 	Options []Option
 	TradeHistory []string		// list of tradeIDs
@@ -156,8 +159,9 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
         return t.readTradeIDsOfUser(stub, args)
     }	else if function == "readTrades" {
         return t.readTrades(stub, args)
+    }	else if function == "readQuoteRequests" {
+        return t.readQuoteRequests(stub, args)
     }	
-
 	fmt.Println("query did not find func: " + function)
     return nil, errors.New("Received unknown function query")
 }
@@ -589,13 +593,16 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 	return nil, errors.New("Incorrect number of arguments")
 }
 /*			arg 0	:	TradeID
-			arg 1	:	Trade execution's TransactionID
-			arg 2	:	Yes/ No
+			arg 1	:	Yes/ No
 */
+
+// use only tradeID
+// check trade type buy/ sell and settle accordingly
+
 func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	if len(args)== 3 {
 		tradeID := args[0]
-		tExecId := args[1]
+		//tExecId := args[1]
 		// get client's enrollment id
 		bytes, err := stub.GetCallerCertificate();
 		if(err != nil){
@@ -631,7 +638,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		client.Options = client.Options[:len(client.Options)-1]
 
 		// check if trade has to be settled
-		if strings.ToLower(args[2]) == "yes" {
+		if strings.ToLower(args[1]) == "yes" {
 
 			ctidByte, err := stub.GetState("currentTransactionNum")
 			if(err != nil){
@@ -642,6 +649,18 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			if(err != nil){
 				return nil, errors.New("Error while converting ctidByte to integer")
 			}		
+			// get transactionID from tradeID
+			
+			tradebyte,err := stub.GetState(tradeID)																										
+			if err != nil {
+				return nil,errors.New("Error while getting trade info from ledger")
+			}
+			var trade Trade
+			err = json.Unmarshal(tradebyte, &trade)		
+			if err != nil {
+				return nil,errors.New("Error while unmarshalling trade data")
+			}
+			tExecId := trade.TransactionHistory[len(trade.TransactionHistory)-1]
 			
 			// get information from trade exec transaction
 			tbyte,err := stub.GetState(tExecId)												
@@ -690,15 +709,29 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				if(err != nil){
 					return nil, errors.New("Error while writing currentTransactionNum to ledger")
 				}
+				
 				// add stock to clients portfolio, check if stock already exists if yes increase quantity else create new stock entry 		
 				stockExistFlag := false
 				for i := 0; i< len(client.Portfolio); i++ {
 					if client.Portfolio[i].Symbol == t.StockSymbol {
 						stockExistFlag = true
-						client.Portfolio[i].Quantity = client.Portfolio[i].Quantity + t.Quantity
+						if strings.ToLower(t.OptionType) == "buy" {
+							client.Portfolio[i].Quantity = client.Portfolio[i].Quantity + t.Quantity
+						} else {	// sell option type
+							if client.Portfolio[i].Quantity >= t.Quantity {
+								client.Portfolio[i].Quantity = client.Portfolio[i].Quantity - t.Quantity
+							} else {
+								return nil, errors.New("Error insufficient stock quantity")
+							}
+						}
 						break
 					}
 				}
+				
+				if (strings.ToLower(t.OptionType) == "sell") && (stockExistFlag == false) {
+					return nil, errors.New("Error insufficient stock quantity")
+				}
+				
 				// create new stock entry
 				if stockExistFlag == false {
 					newStock := Stock{Symbol: t.StockSymbol,Quantity: t.Quantity}
@@ -714,12 +747,29 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				if(err != nil){
 					return nil, errors.New("Error while unmarshalling bank data")
 				}
+				
+				stockExistFlag = false
 				for i := 0; i< len(bank.Portfolio); i++ {
 					if bank.Portfolio[i].Symbol == t.StockSymbol {
-						bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity - t.Quantity
+						stockExistFlag = true
+						if strings.ToLower(t.OptionType) == "buy" {		
+								if bank.Portfolio[i].Quantity >= t.Quantity {
+									bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity - t.Quantity
+								} else {
+									return nil, errors.New("Error insufficient stock quantity")
+								}
+						} else {
+							bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity + t.Quantity
+						}
 						break
 					}
 				}
+				// create new stock entry
+				if stockExistFlag == false {
+					newStock := Stock{Symbol: t.StockSymbol,Quantity: t.Quantity}
+					bank.Portfolio = append(bank.Portfolio,newStock)
+				}
+				
 				// update bank state
 				b, err = json.Marshal(bank)
 				if err == nil {
@@ -820,13 +870,7 @@ func (t *SimpleChaincode) readTradeIDsOfUser(stub *shim.ChaincodeStub, args []st
 		if(err != nil){
 			return nil, errors.New("Error while unmarshalling entity data")
 		}
-		/*
-		byteVal := make([]byte,len(entity.TransactionHistory))
-		// read transactions of entity
-		for i:=0; i<len(entity.TransactionHistory); i++ {
-			byteVal[i], err = t.readTransaction(stub,entity.TransactionHistory[i])
-		}
-		*/
+
 		b, err := json.Marshal(entity.TradeHistory)
 		if err != nil {
 			return nil, errors.New("Error while marshalling trade history")
@@ -945,4 +989,40 @@ func (t *SimpleChaincode) readTrades(stub *shim.ChaincodeStub, args []string) ([
 		return b, nil
 	}
 	return nil, errors.New("Incorrect number of arguments")
+}
+
+func (t *SimpleChaincode) readQuoteRequests(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+
+	var quoteTransactions []string
+	// get current Trade number
+	ctidByte, err := stub.GetState("currentTradeNum")
+	if(err != nil){
+		return nil, errors.New("Error while getting currentTradeNum from ledger")
+	}
+	tradeNum,err := strconv.Atoi(string(ctidByte))
+	if(err != nil){
+		return nil, errors.New("Error while converting ctidByte to integer")
+	}
+	// check all trades
+	for tradeNum > 1000 {
+		// read trade state
+		tradebyte,err := stub.GetState("trade"+strconv.Itoa(tradeNum))
+		if err != nil {
+			return nil, errors.New("Error while getting trade info from ledger")
+		}
+		var trade Trade
+		err = json.Unmarshal(tradebyte, &trade)		
+		if err != nil {
+			return nil, errors.New("Error while unmarshalling trade data")
+		}
+		// check status
+		if trade.Status == "Quote requested" {
+			quoteTransactions = append(quoteTransactions,trade.TransactionHistory[0])
+		}
+		tradeNum--
+	}
+	buffer := &bytes.Buffer{}
+	gob.NewEncoder(buffer).Encode(quoteTransactions)
+ 	byteSlice := buffer.Bytes()
+	return []byte(byteSlice), nil
 }
