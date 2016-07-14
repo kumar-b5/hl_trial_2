@@ -8,8 +8,8 @@ import (
 	"crypto/x509"
 	"strings"
 	"time"
-	"bytes"
- 	"encoding/gob"
+	//"bytes"
+ 	//"encoding/gob"
 )
 type Stock struct{
 	Symbol string
@@ -77,7 +77,6 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 		EntityName:	"Client A",
 		EntityType: "Client",
 		Portfolio: []Stock{{Symbol:"GOOGL",Quantity:10},{Symbol:"AAPL",Quantity:20}},
-		Options: []Option{{Symbol:"AMZN",Quantity:10,SettlementDate: time.Date(2016, 07, 01, 0, 0, 0, 0, time.UTC)}},
 	}
 	b, err := json.Marshal(client)
 	if err == nil {
@@ -191,11 +190,46 @@ func (t *SimpleChaincode) readTransaction(stub *shim.ChaincodeStub, args []strin
     }
     tid = args[0]
     valAsbytes, err := stub.GetState(tid)
-    if err != nil {
+	if err != nil {
 		jsonResp = "{\"Error\":\"Failed to get state for " + tid + "\"}"
 		return nil, errors.New(jsonResp)
     }
-    return valAsbytes, nil
+	
+	var tran Transaction
+	err = json.Unmarshal(valAsbytes, &tran)
+	if(err != nil){
+		return nil, errors.New("Error while unmarshalling transaction data")
+	}
+	
+	bytes, err := stub.GetCallerCertificate();
+	if(err != nil){
+		return nil, errors.New("Error while getting caller certificate")
+	}
+	x509Cert, err := x509.ParseCertificate(bytes);
+	
+	// check entity type and accordingly allow transaction to be read
+	entityByte,err := stub.GetState(x509Cert.Subject.CommonName)																											
+	if(err != nil){
+		return nil, errors.New("Error while getting bank info from ledger")
+	}
+	var entity Entity
+	err = json.Unmarshal(entityByte, &entity)
+	if(err != nil){
+		return nil, errors.New("Error while unmarshalling entity data")
+	}
+	
+	switch entity.EntityType {
+		case "RegBody":	return valAsbytes, nil
+		case "Client":	if tran.ClientID == x509Cert.Subject.CommonName {
+							return valAsbytes, nil
+						}
+		case "Bank":	if tran.TransactionType == "RFQ" {
+							return valAsbytes, nil
+						} else if tran.BankID == x509Cert.Subject.CommonName {
+							return valAsbytes, nil
+						}
+	}
+    return nil, nil
 }
 // used by client to request for quotes for a particular stock, adds rfq transaction to ledger
 /*			arg 0	:	OptionType
@@ -349,6 +383,12 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		if rfq.TradeID != tradeID {
 			return nil, errors.New("Mismatch in tradeIDs")	
 		}		
+		
+		// add trade to bank's trade history
+		err = updateTradeHistory(stub, x509Cert.Subject.CommonName, tradeID)
+		if err != nil {
+			return nil, errors.New("Error while updating trade history")
+		}
 		
 		// check if bank has required stock quantity 
 		bankbyte,err := stub.GetState(x509Cert.Subject.CommonName)																											
@@ -1081,11 +1121,15 @@ func (t *SimpleChaincode) readQuoteRequests(stub *shim.ChaincodeStub, args []str
 			if respondedFlag == false {
 				quoteTransactions = append(quoteTransactions,trade.TransactionHistory[0])
 			}
-		}	
+		}
 		tradeNum--
 	}
-	buffer := &bytes.Buffer{}
-	gob.NewEncoder(buffer).Encode(quoteTransactions)
- 	byteSlice := buffer.Bytes()
-	return []byte(byteSlice), nil
+	b, err := json.Marshal(quoteTransactions)
+	return b, nil
+	/*
+		buffer := &bytes.Buffer{}
+		gob.NewEncoder(buffer).Encode(quoteTransactions)
+		byteSlice := buffer.Bytes()
+		return []byte(byteSlice), nil
+	*/
 }
