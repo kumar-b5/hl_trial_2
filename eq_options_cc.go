@@ -118,7 +118,7 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 		return nil, err
 	}
 	
-	EntityList := {"user_type1_708e3151c7", "user_type1_5992b632c1", "user_type1_6e041a6873", "user_type2_e3351cfbe8"}
+	EntityList := []string{"user_type1_708e3151c7", "user_type1_5992b632c1", "user_type1_6e041a6873", "user_type2_e3351cfbe8"}
 	b, err = json.Marshal(EntityList)
 	if err == nil {
 		err = stub.PutState("entityList",b)
@@ -182,7 +182,10 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
         return t.readTrades(stub, args)
     }	else if function == "readQuoteRequests" {
         return t.readQuoteRequests(stub, args)
+    }	else if function == "getAllTrades" {
+        return t.getAllTrades(stub, args)
     }	
+	
 	fmt.Println("query did not find func: " + function)
     return nil, errors.New("Received unknown function query")
 }
@@ -267,8 +270,6 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 		tid = tid + 1
 		transactionID := "trans"+strconv.Itoa(tid)
 		
-		
-		
 		// get current Trade number
 		ctidByte, err = stub.GetState("currentTradeNum")
 		if err != nil {			
@@ -297,8 +298,6 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 			_ = updateTransactionStatus(stub, transactionID, "Error while parsing caller certificate")
 			return nil, nil
 		}
-		
-		
 		tradeID = tradeID + 1
 		
 		//Transaction
@@ -322,7 +321,7 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 		Quantity: t.Quantity,
 		TradeType: t.OptionType,
 		}
-		
+
 		// convert to Transaction to JSON
 		b, err := json.Marshal(t)
 		// write to ledger
@@ -1211,4 +1210,35 @@ func (t *SimpleChaincode) getEntityList(stub *shim.ChaincodeStub, args []string)
 	}
 	b, err := json.Marshal(entities)
 	return b, nil
+}
+func (t *SimpleChaincode) getAllTrades(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	// check entity type
+	entitybyte,err := stub.GetState(args[0])																									
+	if err != nil {
+		return nil, errors.New("Error while getting entity info from ledger")
+	}
+	var entity Entity
+	err = json.Unmarshal(entitybyte, &entity)		
+	if err != nil {
+		return nil, errors.New("Error while unmarshalling entity data")
+	}
+	if entity.EntityType == "RegBody" {		
+			var tradeList []string
+			// get current Trade number
+			ctidByte, err := stub.GetState("currentTradeNum")
+			if err != nil {
+				return nil, errors.New("Error while getting currentTradeNum from ledger")
+			}
+			tradeNum,err := strconv.Atoi(string(ctidByte))
+			if err != nil {
+				return nil, errors.New("Error while converting ctidByte to integer")
+			}
+			for tradeNum > 1000 {
+					tradeList = append(tradeList,"trade"+strconv.Itoa(tradeNum))
+					tradeNum--
+			}
+			b, err := json.Marshal(tradeList)
+			return b, nil
+	}
+	return nil, errors.New("Error only Regulatory Body can access all trades")
 }
