@@ -117,6 +117,15 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
     } else {
 		return nil, err
 	}
+	
+	EntityList := {"user_type1_708e3151c7", "user_type1_5992b632c1", "user_type1_6e041a6873", "user_type2_e3351cfbe8"}
+	b, err = json.Marshal(EntityList)
+	if err == nil {
+		err = stub.PutState("entityList",b)
+    } else {
+		return nil, err
+	}
+	
 	// initialize trade num and transaction num
 	byteVal, err := stub.GetState("currentTransactionNum")
 	if len(byteVal) == 0 {
@@ -1170,4 +1179,36 @@ func updateTransactionStatus(stub *shim.ChaincodeStub, transactionID string, sta
 			return errors.New("Json Marshalling error")
 		}
 		return nil
+}
+func (t *SimpleChaincode) getEntityList(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	var allEntities []string
+	var entities []string
+	// get current Trade number
+	ctidByte, err := stub.GetState("entityList")
+	if(err != nil){
+		return nil, errors.New("Error while getting entity list from ledger")
+	}
+	err = json.Unmarshal(ctidByte, &allEntities)		
+	if(err != nil){
+		return nil, errors.New("Error while unmarshalling entity data")
+	}
+	// check all entities
+	for i:=0; i< len(allEntities); i++ {
+		// read trade state
+		entityByte,err := stub.GetState(allEntities[i])
+		if err != nil {
+			return nil, errors.New("Error while getting entity info from ledger")
+		}
+		var entity Entity
+		err = json.Unmarshal(entityByte, &entity)		
+		if err != nil {
+			return nil, errors.New("Error while unmarshalling entity data")
+		}
+		// check type
+		if entity.EntityType == "Client" || entity.EntityType == "Bank" {
+			entities = append(entities,allEntities[i])
+		}
+	}
+	b, err := json.Marshal(entities)
+	return b, nil
 }
