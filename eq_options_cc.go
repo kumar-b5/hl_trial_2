@@ -36,7 +36,7 @@ type Trade struct
 	TradeID string				// rfq transaction id
 	Symbol string
 	Quantity int
-	TradeType string			// buy/sell
+	TradeType string			// Call/ Put
 	TransactionHistory []string // transactions belonging to this trade
 	Status string				// "Quote requested" or "Responded" or "Trade executed" or "Trade settled" or "Trade timed out"
 }
@@ -44,7 +44,7 @@ type Transaction struct{		// ledger transactions
 	TransactionID string		// different for every transaction
 	TradeID string				// same for all transactions corresponding to a single trade
 	TransactionType string		// type of transaction rfq or resp or tradeExec or tradeSet
-	OptionType string    		// buy/sell
+	OptionType string    		// Call/ Put
 	ClientID string				// entityId of client
 	BankID string				// entityId of bank1 or bank2
 	StockSymbol string				
@@ -499,6 +499,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 			return nil, nil
 		}
 		settlementDate := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+		
 		// check if settlement date is greater than current date
 		if settlementDate.Before(time.Now()) {
 			_ = updateTransactionStatus(stub, transactionID, "Error cannot respond to quote due to incorrect settlement date")
@@ -670,11 +671,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 			return nil, nil
 		}		
 		
-		// add option to bank data (switch optiontype)
-		bankOptionType := "buy"
-		if t.OptionType == "buy" {
-			bankOptionType = "sell"
-		}
+		bankOptionType := t.OptionType
 		
 		bankbyte,err := stub.GetState(t.BankID)																										
 		if err != nil {
@@ -865,9 +862,9 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				for i := 0; i< len(client.Portfolio); i++ {
 					if client.Portfolio[i].Symbol == t.StockSymbol {
 						stockExistFlag = true
-						if strings.ToLower(t.OptionType) == "buy" {
+						if strings.ToLower(t.OptionType) == "Call" {
 							client.Portfolio[i].Quantity = client.Portfolio[i].Quantity + t.Quantity
-						} else {	// sell option type
+						} else {	// Put option type
 							if client.Portfolio[i].Quantity >= t.Quantity {
 								client.Portfolio[i].Quantity = client.Portfolio[i].Quantity - t.Quantity
 							} else {
@@ -879,7 +876,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					}
 				}
 				
-				if (strings.ToLower(t.OptionType) == "sell") && (stockExistFlag == false) {
+				if (strings.ToLower(t.OptionType) == "Put") && (stockExistFlag == false) {
 					_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity")
 					return nil, nil
 				}
@@ -894,7 +891,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				for i := 0; i< len(bank.Portfolio); i++ {
 					if bank.Portfolio[i].Symbol == t.StockSymbol {
 						stockExistFlag = true
-						if strings.ToLower(t.OptionType) == "buy" {
+						if strings.ToLower(t.OptionType) == "Call" {
 								if bank.Portfolio[i].Quantity >= t.Quantity {
 									bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity - t.Quantity
 								} else {
