@@ -587,17 +587,15 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		}
 		x509Cert, err := x509.ParseCertificate(bytes);
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while converting ctidByte to integer")
+			_ = updateTransactionStatus(stub, transactionID, "Error while parsing caller certificate")
 			return nil, nil
-			return nil, errors.New("Error while parsing caller certificate")
-		}		
-		
+		}
+
 		// get information from selected quote
 		quotebyte,err := stub.GetState(quoteId)
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while converting ctidByte to integer")
+			_ = updateTransactionStatus(stub, transactionID, "Error while getting quote data")
 			return nil, nil
-			return nil, errors.New("Error while getting quote transaction from ledger")
 		}
 		var quote Transaction
 		err = json.Unmarshal(quotebyte, &quote)		
@@ -868,7 +866,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				for i := 0; i< len(client.Portfolio); i++ {
 					if client.Portfolio[i].Symbol == t.StockSymbol {
 						stockExistFlag = true
-						if strings.ToLower(t.OptionType) == "Call" {
+						if strings.ToLower(t.OptionType) == "call" {
 							client.Portfolio[i].Quantity = client.Portfolio[i].Quantity + t.Quantity
 						} else {	// Put option type
 							if client.Portfolio[i].Quantity >= t.Quantity {
@@ -882,7 +880,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					}
 				}
 				
-				if (strings.ToLower(t.OptionType) == "Put") && (stockExistFlag == false) {
+				if (strings.ToLower(t.OptionType) == "put") && (stockExistFlag == false) {
 					_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity")
 					return nil, nil
 				}
@@ -897,7 +895,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				for i := 0; i< len(bank.Portfolio); i++ {
 					if bank.Portfolio[i].Symbol == t.StockSymbol {
 						stockExistFlag = true
-						if strings.ToLower(t.OptionType) == "Call" {
+						if strings.ToLower(t.OptionType) == "call" {
 								if bank.Portfolio[i].Quantity >= t.Quantity {
 									bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity - t.Quantity
 								} else {
@@ -911,11 +909,10 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					}
 				}
 				// create new stock entry
-				if stockExistFlag == false {
+				if  (strings.ToLower(t.OptionType) == "put") && (stockExistFlag == false) {
 					newStock := Stock{Symbol: t.StockSymbol,Quantity: t.Quantity}
 					bank.Portfolio = append(bank.Portfolio,newStock)
-				}
-				
+				}				
 				// update bank state
 				b, err = json.Marshal(bank)
 				if err == nil {
