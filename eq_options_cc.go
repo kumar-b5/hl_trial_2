@@ -189,8 +189,9 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
         return t.getAllTrades(stub, args)
     }	else if function == "getEntityList" {
         return t.getEntityList(stub, args)
+    }	else if function == "getTransactionStatus" {
+        return t.getTransactionStatus(stub, args)
     }
-	
 	fmt.Println("query did not find func: " + function)
     return nil, errors.New("Received unknown function query")
 }
@@ -1257,4 +1258,20 @@ func (t *SimpleChaincode) getAllTrades(stub *shim.ChaincodeStub, args []string) 
 			return b, nil
 	}
 	return nil, errors.New("Error only Regulatory Body can access all trades")
+}
+func (t *SimpleChaincode) getTransactionStatus(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+		if len(args)== 1 {
+				transactionID := "trans"+args[0]
+				tbyte,err := stub.GetState(transactionID)												
+				if err != nil {
+					return []byte("Error while getting transaction from ledger"), nil
+				}
+				var transaction Transaction
+				err = json.Unmarshal(tbyte, &transaction)		
+				if err != nil {
+					return []byte("Error while unmarshalling transaction data"), nil
+				}
+				return []byte(transaction.Status),nil
+		}
+		return nil, errors.New("Incorrect number of arguments")		
 }
