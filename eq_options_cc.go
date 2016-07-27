@@ -121,7 +121,7 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 		return nil, err
 	}
 	
-	EntityList := []string{"user_type1_708e3151c7", "user_type1_5992b632c1", "user_type1_6e041a6873", "user_type2_e3351cfbe8"}
+	EntityList := []string{"user_type2_55de6f039a", "user_type2_593ec480c3", "user_type2_e301b6e589", "user_type2_11bb91f43b"}
 	b, err = json.Marshal(EntityList)
 	if err == nil {
 		err = stub.PutState("entityList",b)
@@ -187,7 +187,9 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
         return t.readQuoteRequests(stub, args)
     }	else if function == "getAllTrades" {
         return t.getAllTrades(stub, args)
-    }	
+    }	else if function == "getEntityList" {
+        return t.getEntityList(stub, args)
+    }
 	
 	fmt.Println("query did not find func: " + function)
     return nil, errors.New("Received unknown function query")
@@ -1237,7 +1239,21 @@ func (t *SimpleChaincode) getAllTrades(stub *shim.ChaincodeStub, args []string) 
 					tradeList = append(tradeList,"trade"+strconv.Itoa(tradeNum))
 					tradeNum--
 			}
-			b, err := json.Marshal(tradeList)
+			trades := make([]Trade,len(tradeList))
+			for i:=0; i<len(tradeList); i++ {
+				byteVal,err := stub.GetState(tradeList[i])
+				if err != nil {
+					return nil, errors.New("Error while getting trades info from ledger")
+				}
+				err = json.Unmarshal(byteVal, &trades[i])	
+				if err != nil {
+					return nil, errors.New("Error while unmarshalling trades")
+				}	
+			}
+			b, err := json.Marshal(trades)
+			if err != nil {
+				return nil, errors.New("Error while marshalling trades")
+			}
 			return b, nil
 	}
 	return nil, errors.New("Error only Regulatory Body can access all trades")
