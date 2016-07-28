@@ -1259,16 +1259,16 @@ func (t *SimpleChaincode) getAllTrades(stub *shim.ChaincodeStub, args []string) 
 func (t *SimpleChaincode) getTransactionStatus(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 		if len(args)== 1 {
 				transactionID := "trans"+args[0]
-				tbyte,err := stub.GetState(transactionID)												
+				tbyte,err := stub.GetState(transactionID)
 				if err != nil {
-					return []byte("Error while getting transaction from ledger"), nil
+					return []byte("Error while getting transaction from ledger to get transaction status of "+transactionID), nil
 				}
 				var transaction Transaction
-				err = json.Unmarshal(tbyte, &transaction)		
+				err = json.Unmarshal(tbyte, &transaction)
 				if err != nil {
-					return []byte("Error while unmarshalling transaction data"), nil
+					return []byte("Error while unmarshalling transaction data to get transaction status of "+transactionID), nil
 				}
 				return []byte(transaction.Status),nil
 		}
-		return nil, errors.New("Incorrect number of arguments")		
+		return nil, errors.New("Incorrect number of arguments")
 }
