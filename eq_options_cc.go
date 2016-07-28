@@ -38,7 +38,7 @@ type Trade struct
 	Quantity int
 	TradeType string			// Call/ Put
 	TransactionHistory []string // transactions belonging to this trade
-	Status string				// "Quote requested" or "Responded" or "Trade executed" or "Trade settled" or "Trade timed out"
+	Status string				// "Quote requested" or "Responded" or "Trade executed" or "Trade exercised" or "Trade timed out"
 }
 type Transaction struct{		// ledger transactions
 	TransactionID string		// different for every transaction
@@ -489,26 +489,26 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		}
 		year, err := strconv.Atoi(args[4])
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error invalid settlement year data")
+			_ = updateTransactionStatus(stub, transactionID, "Error invalid Expiration date")
 			return nil, nil
 		}
 		var m int
 		m, err = strconv.Atoi(args[5])
 		var month time.Month = time.Month(m)
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error invalid settlement year data")
+			_ = updateTransactionStatus(stub, transactionID, "Error invalid Expiration date")
 			return nil, nil
 		}
 		day, err := strconv.Atoi(args[6])
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error invalid settlement year data")
+			_ = updateTransactionStatus(stub, transactionID, "Error invalid Expiration date")
 			return nil, nil
 		}
 		settlementDate := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 		
 		// check if settlement date is greater than current date
 		if settlementDate.Before(time.Now()) {
-			_ = updateTransactionStatus(stub, transactionID, "Error cannot respond to quote due to incorrect settlement date")
+			_ = updateTransactionStatus(stub, transactionID, "Error cannot respond to quote due to incorrect Expiration date")
 		}
 
 		
@@ -611,7 +611,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		
 		// check if settlement Date is greater than current date
 		if quote.SettlementDate.Before(time.Now()) {
-			_ = updateTransactionStatus(stub, transactionID, "Error cannot execute trade due to invalid settlement date")
+			_ = updateTransactionStatus(stub, transactionID, "Error cannot execute trade due to invalid Expiration date")
 			return nil, nil
 		}
 		
@@ -881,7 +881,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				}
 				
 				if (strings.ToLower(t.OptionType) == "put") && (stockExistFlag == false) {
-					_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity")
+					_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity to complete the transaction")
 					return nil, nil
 				}
 				
@@ -908,6 +908,12 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 						break
 					}
 				}
+				
+				if (strings.ToLower(t.OptionType) == "call") && (stockExistFlag == false) {
+					_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity to complete the transaction")
+					return nil, nil
+				}
+				
 				// create new stock entry
 				if  (strings.ToLower(t.OptionType) == "put") && (stockExistFlag == false) {
 					newStock := Stock{Symbol: t.StockSymbol,Quantity: t.Quantity}
@@ -922,7 +928,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					return nil, nil
 				}
 				// updating trade state
-				err = updateTradeState(stub, t.TradeID, t.TransactionID,"Trade Settled")
+				err = updateTradeState(stub, t.TradeID, t.TransactionID,"Trade Exercised")
 				if err != nil {
 					_ = updateTransactionStatus(stub, transactionID, "Error while updating trade state")
 					return nil, nil
@@ -1246,7 +1252,7 @@ func (t *SimpleChaincode) getAllTrades(stub *shim.ChaincodeStub, args []string) 
 				err = json.Unmarshal(byteVal, &trades[i])	
 				if err != nil {
 					return nil, errors.New("Error while unmarshalling trades")
-				}	
+				}
 			}
 			b, err := json.Marshal(trades)
 			if err != nil {
