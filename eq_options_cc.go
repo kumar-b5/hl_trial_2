@@ -827,7 +827,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			
 			// check settlement date to see if option is still valid
 			if time.Now().Before(tExec.SettlementDate) {
-				tid = tid + 1
+				
 				t := Transaction{
 				TransactionID: transactionID,
 				TradeID: tradeID,							// based on input
@@ -853,11 +853,6 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					}
 				} else {
 					_ = updateTransactionStatus(stub, transactionID, "Error Json Marshalling")
-					return nil, nil
-				}
-				err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
-				if err != nil {
-					_ = updateTransactionStatus(stub, transactionID, "Error while writing currentTransactionNum to ledger")
 					return nil, nil
 				}
 				
@@ -958,6 +953,11 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			err = stub.PutState(client.EntityID,b)
 		} else {
 			_ = updateTransactionStatus(stub, transactionID, "Error updating Client state")
+			return nil, nil
+		}
+		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
+		if err != nil {
+			_ = updateTransactionStatus(stub, transactionID, "Error while writing currentTransactionNum to ledger")
 			return nil, nil
 		}
 		return nil, nil
