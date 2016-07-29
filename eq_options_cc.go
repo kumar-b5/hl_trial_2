@@ -700,7 +700,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		}
 		
 		// updating trade transaction history  and status
-		err = updateTradeState(stub, t.TradeID, t.TransactionID,"Trade executed")
+		err = updateTradeState(stub, t.TradeID, t.TransactionID,"Trade Executed")
 		if err != nil {
 			_ = updateTransactionStatus(stub, transactionID, "Error while updating trade state")
 			return nil, nil
