@@ -290,7 +290,7 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 			
 		q,err := strconv.Atoi(args[2])
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while converting args[2] to integer")
+			_ = updateTransactionStatus(stub, transactionID, "Error while converting quantity to integer")
 			return nil, nil			
 		}
 		bytes, err := stub.GetCallerCertificate();
@@ -338,7 +338,7 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 				return nil, nil
 			}
 		} else {
-			_ = updateTransactionStatus(stub, transactionID, "Json Marshalling error")
+			_ = updateTransactionStatus(stub, transactionID, "Error while marshalling trade data")
 			return nil, nil
 		}
 		
@@ -348,24 +348,24 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 		if err == nil {
 			err = stub.PutState(tr.TradeID,b)
 			if err != nil {
-				_ = updateTransactionStatus(stub, transactionID, "Error while writing Trade to ledger")
+				_ = updateTransactionStatus(stub, transactionID, "Error while writing Trade data to ledger")
 				return nil, nil
 			}
 		} else {
-			_ = updateTransactionStatus(stub, transactionID, "Json Marshalling error")
+			_ = updateTransactionStatus(stub, transactionID, "Error while marshalling trade data")
 			return nil, nil
 		}
 		
 		// update currentTransactionNum
 		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while writing currentTransactionNum to ledger")
+			_ = updateTransactionStatus(stub, transactionID, "Error while updating current transaction number")
 			return nil, nil
 		}
 		// update currentTradeNum
 		err = stub.PutState("currentTradeNum", []byte(strconv.Itoa(tradeID)))
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while writing currentTransactionNum to ledger")
+			_ = updateTransactionStatus(stub, transactionID, "Error while updating current transaction number")
 			return nil, nil
 		}
 		
@@ -425,18 +425,18 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		// get information from requestForQuote transaction
 		rfqbyte,err := stub.GetState(quoteID)												
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while rfq transaction from ledger")
+			_ = updateTransactionStatus(stub, transactionID, "Error while reading quote request transaction from ledger")
 			return nil, nil
 		}
 		var rfq Transaction
 		err = json.Unmarshal(rfqbyte, &rfq)
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while unmarshalling rfq data")
+			_ = updateTransactionStatus(stub, transactionID, "Error while unmarshalling quote request data")
 			return nil, nil
 		}
 		
 		if rfq.TradeID != tradeID {
-			_ = updateTransactionStatus(stub, transactionID, "Mismatch in tradeIDs")
+			_ = updateTransactionStatus(stub, transactionID, "Error due to mismatch in tradeIDs")
 			return nil, nil
 		}		
 		
@@ -538,13 +538,13 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 				return nil, nil
 			}
 		} else {
-			_ = updateTransactionStatus(stub, transactionID, "Error Json Marshalling error")
+			_ = updateTransactionStatus(stub, transactionID, "Error while marshalling transaction data")
 			return nil, nil
 		}
 		
 		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
 		if err != nil {
-			_ = updateTransactionStatus(stub, transactionID, "Error while writing current TransactionNum to ledger")
+			_ = updateTransactionStatus(stub, transactionID, "Error while writing current Transaction Number to ledger")
 			return nil, nil
 		}
 		
@@ -567,7 +567,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		
 		ctidByte, err := stub.GetState("currentTransactionNum")
 		if err != nil {
-			return nil, errors.New("Error while getting currentTransactionNum from ledger")
+			return nil, errors.New("Error while getting current Transaction Number from ledger")
 		}		
 		tid,err := strconv.Atoi(string(ctidByte))
 		if err != nil {
@@ -605,7 +605,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		}
 		
 		if quote.TradeID != tradeID {
-			_ = updateTransactionStatus(stub, transactionID, "Error mismatch in tradeIDs")	
+			_ = updateTransactionStatus(stub, transactionID, "Error due to mismatch in tradeIDs")	
 			return nil, nil
 		}
 		
@@ -695,7 +695,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		if err == nil {
 			err = stub.PutState(bank.EntityID,b)
 		} else {
-			_ = updateTransactionStatus(stub, transactionID, "Error updating Bank state")
+			_ = updateTransactionStatus(stub, transactionID, "Error while updating Bank state")
 			return nil, nil
 		}
 		
@@ -821,7 +821,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 		// check if trade has to be settled
 		if strings.ToLower(args[1]) == "yes" {
 			if tExec.TradeID != tradeID {
-				_ = updateTransactionStatus(stub, transactionID, "Error mismatch in tradeIDs")
+				_ = updateTransactionStatus(stub, transactionID, "Error due to mismatch in tradeIDs")
 				return nil, nil
 			}
 			
@@ -852,7 +852,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 						return nil, nil
 					}
 				} else {
-					_ = updateTransactionStatus(stub, transactionID, "Error Json Marshalling")
+					_ = updateTransactionStatus(stub, transactionID, "Error while marshalling transaction data")
 					return nil, nil
 				}
 				
@@ -867,7 +867,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 							if client.Portfolio[i].Quantity >= t.Quantity {
 								client.Portfolio[i].Quantity = client.Portfolio[i].Quantity - t.Quantity
 							} else {
-								_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity")
+								_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity to complete the transaction")
 								return nil, nil
 							}
 						}
@@ -894,7 +894,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 								if bank.Portfolio[i].Quantity >= t.Quantity {
 									bank.Portfolio[i].Quantity = bank.Portfolio[i].Quantity - t.Quantity
 								} else {
-									_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity")
+									_ = updateTransactionStatus(stub, transactionID, "Error insufficient stock quantity to complete the transaction")
 									return nil, nil
 								}
 						} else {
@@ -919,7 +919,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				if err == nil {
 					err = stub.PutState(bank.EntityID,b)
 				} else {
-					_ = updateTransactionStatus(stub, transactionID, "Error updating Bank state")
+					_ = updateTransactionStatus(stub, transactionID, "Error while updating Bank state")
 					return nil, nil
 				}
 				// updating trade state
@@ -931,6 +931,9 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				
 			} else {	// trade expired
 				
+				
+				_ = updateTransactionStatus(stub, transactionID, "")
+				
 				// updating trade state
 				err = updateTradeState(stub, tradeID,"" ,"Trade Expired")
 				if err != nil {
@@ -940,6 +943,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				
 			}
 		} else {	// trade cancelled
+			_ = updateTransactionStatus(stub, transactionID, "")
 			// updating trade state
 			err = updateTradeState(stub, tradeID,"" ,"Trade Cancelled")
 			if err != nil {
