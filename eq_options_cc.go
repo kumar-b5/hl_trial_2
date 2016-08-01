@@ -43,7 +43,7 @@ type Trade struct
 type Transaction struct{		// ledger transactions
 	TransactionID string		// different for every transaction
 	TradeID string				// same for all transactions corresponding to a single trade
-	TransactionType string		// type of transaction rfq or resp or tradeExec or tradeSet
+	TransactionType string		// type of transaction rfq or resp or tradeExec or tradeSet	   Request	Response Execute	Exercise
 	OptionType string    		// Call/ Put
 	ClientID string				// entityId of client
 	BankID string				// entityId of bank1 or bank2
@@ -249,7 +249,7 @@ func (t *SimpleChaincode) readTransaction(stub *shim.ChaincodeStub, args []strin
 		case "Client":	if tran.ClientID == x509Cert.Subject.CommonName {
 							return valAsbytes, nil
 						}
-		case "Bank":	if tran.TransactionType == "RFQ" {
+		case "Bank":	if tran.TransactionType == "Request" {
 							return valAsbytes, nil
 						} else if tran.BankID == x509Cert.Subject.CommonName {
 							return valAsbytes, nil
@@ -310,7 +310,7 @@ func (t *SimpleChaincode) requestForQuote(stub *shim.ChaincodeStub, args []strin
 		t := Transaction{
 		TransactionID: transactionID,
 		TradeID: "trade"+strconv.Itoa(tradeID),			// create new TradeID
-		TransactionType: "RFQ",
+		TransactionType: "Request",
 		OptionType: args[0],   						// based on input 
 		ClientID:	x509Cert.Subject.CommonName,	// enrollmentID
 		BankID: "",
@@ -515,7 +515,7 @@ func (t *SimpleChaincode) respondToQuote(stub *shim.ChaincodeStub, args []string
 		t := Transaction {
 		TransactionID: transactionID,
 		TradeID: tradeID,																// based on input
-		TransactionType: "RESP",
+		TransactionType: "Response",
 		OptionType: rfq.OptionType,														// get from rfq
 		ClientID:	rfq.ClientID,														// get from rfq
 		BankID: x509Cert.Subject.CommonName,											// enrollmentID
@@ -618,7 +618,7 @@ func (t *SimpleChaincode) tradeExec(stub *shim.ChaincodeStub, args []string) ([]
 		t := Transaction{
 		TransactionID: transactionID,
 		TradeID: tradeID,							// based on input
-		TransactionType: "EXEC",
+		TransactionType: "Execute",
 		OptionType: quote.OptionType,				// get from quote transaction
 		ClientID: x509Cert.Subject.CommonName,		// get from quote transaction
 		BankID: quote.BankID,						// get from quote transaction
@@ -831,7 +831,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 				t := Transaction{
 				TransactionID: transactionID,
 				TradeID: tradeID,							// based on input
-				TransactionType: "SET",
+				TransactionType: "Exercise",
 				OptionType: tExec.OptionType,				// get from tradeExec transaction
 				ClientID: x509Cert.Subject.CommonName,		// get from tradeExec transaction
 				BankID: tExec.BankID,						// get from tradeExec transaction
@@ -914,14 +914,7 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 					newStock := Stock{Symbol: t.StockSymbol,Quantity: t.Quantity}
 					bank.Portfolio = append(bank.Portfolio,newStock)
 				}				
-				// update bank state
-				b, err = json.Marshal(bank)
-				if err == nil {
-					err = stub.PutState(bank.EntityID,b)
-				} else {
-					_ = updateTransactionStatus(stub, transactionID, "Error while updating Bank state")
-					return nil, nil
-				}
+				
 				// updating trade state
 				err = updateTradeState(stub, t.TradeID, t.TransactionID,"Trade Exercised")
 				if err != nil {
@@ -959,6 +952,15 @@ func (t *SimpleChaincode) tradeSet(stub *shim.ChaincodeStub, args []string) ([]b
 			_ = updateTransactionStatus(stub, transactionID, "Error updating Client state")
 			return nil, nil
 		}
+		// update bank state
+		b, err = json.Marshal(bank)
+		if err == nil {
+			err = stub.PutState(bank.EntityID,b)
+		} else {
+			_ = updateTransactionStatus(stub, transactionID, "Error while updating Bank state")
+			return nil, nil
+		}
+		// update transaction number
 		err = stub.PutState("currentTransactionNum", []byte(strconv.Itoa(tid)))
 		if err != nil {
 			_ = updateTransactionStatus(stub, transactionID, "Error while writing currentTransactionNum to ledger")
@@ -1153,7 +1155,7 @@ func (t *SimpleChaincode) readQuoteRequests(stub *shim.ChaincodeStub, args []str
 				if(err != nil){
 					return nil, errors.New("Error while unmarshalling tran data")
 				}
-				if tran.TransactionType == "RESP" {
+				if tran.TransactionType == "Response" {
 					if tran.BankID == currentUserID {
 						respondedFlag = true
 						break
