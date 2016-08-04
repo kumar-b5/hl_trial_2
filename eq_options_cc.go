@@ -57,10 +57,10 @@ type Transaction struct{		// ledger transactions
 
 
 
-const entity1 = "user_type2_55de6f039a"
-const entity2 = "user_type2_593ec480c3"
-const entity3 = "user_type2_e301b6e589"
-const entity4 = "user_type2_11bb91f43b"
+const entity1 = "user_type1_98c5de950d"
+const entity2 = "user_type1_8b7b3bd8f4"
+const entity3 = "user_type1_8e8c105839"
+const entity4 = "user_type1_55b2dd35d0"
 
 
 type SimpleChaincode struct {
