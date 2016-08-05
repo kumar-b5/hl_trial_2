@@ -121,7 +121,7 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 		return nil, err
 	}
 	
-	EntityList := []string{"user_type2_55de6f039a", "user_type2_593ec480c3", "user_type2_e301b6e589", "user_type2_11bb91f43b"}
+	EntityList := []string{entity1 entity2, entity3, entity4}
 	b, err = json.Marshal(EntityList)
 	if err == nil {
 		err = stub.PutState("entityList",b)
