@@ -213,7 +213,7 @@ func (t *SimpleChaincode) readEntity(stub shim.ChaincodeStubInterface, args []st
 func (t *SimpleChaincode) readTransaction(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
     var tid, jsonResp string
     var err error
-    if len(args) != 1 {
+    if len(args) != 2 {
 		return nil, errors.New("Incorrect number of arguments. Expecting transaction ID")
     }
     tid = args[0]
