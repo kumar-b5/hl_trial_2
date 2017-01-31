@@ -235,7 +235,7 @@ func (t *SimpleChaincode) readTransaction(stub shim.ChaincodeStubInterface, args
 	x509Cert, err := x509.ParseCertificate(bytes);
 	
 	// check entity type and accordingly allow transaction to be read
-	entityByte,err := args[1] //stub.GetState(x509Cert.Subject.CommonName)
+	entityByte,err := stub.GetState(args[1]) //stub.GetState(x509Cert.Subject.CommonName)
 	if(err != nil){
 		return nil, errors.New("Error while getting bank info from ledger")
 	}
