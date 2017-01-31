@@ -1141,6 +1141,7 @@ func (t *SimpleChaincode) readQuoteRequests(stub shim.ChaincodeStubInterface, ar
 			return nil, errors.New("Error while unmarshalling trade data")
 		}
 		// check status
+		fmt.Print("Trade Status "+trade.Status)
 		if trade.Status == "Quote requested" {
 			quoteTransactions = append(quoteTransactions,trade.TransactionHistory[0])
 		} else if trade.Status == "Responded" { // check who has responded
@@ -1174,6 +1175,7 @@ func (t *SimpleChaincode) readQuoteRequests(stub shim.ChaincodeStubInterface, ar
 		tradeNum--
 	}
 	b, err := json.Marshal(quoteTransactions)
+	fmt.Print("Trade List"+string(b))
 	return b, nil
 }
 
