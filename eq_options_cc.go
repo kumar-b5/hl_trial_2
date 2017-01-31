@@ -233,7 +233,7 @@ func (t *SimpleChaincode) readTransaction(stub shim.ChaincodeStubInterface, args
 		return nil, errors.New("Error while getting caller certificate")
 	}
 	x509Cert, err := x509.ParseCertificate(bytes);
-	
+	fmt.Print(x509Cert.Subject.CommonName)
 	// check entity type and accordingly allow transaction to be read
 	entityByte,err := stub.GetState(args[1]) //stub.GetState(x509Cert.Subject.CommonName)
 	if(err != nil){
@@ -301,6 +301,7 @@ func (t *SimpleChaincode) requestForQuote(stub shim.ChaincodeStubInterface, args
 		}
 		// get client enrollmentID
 		x509Cert, err := x509.ParseCertificate(bytes);
+		fmt.Print(x509Cert.Subject.CommonName)
 		if err != nil {
 			_ = updateTransactionStatus(stub, transactionID, "Error while parsing caller certificate")
 			return nil, nil
@@ -419,6 +420,7 @@ func (t *SimpleChaincode) respondToQuote(stub shim.ChaincodeStubInterface, args 
 			return nil, nil
 		}
 		x509Cert, err := x509.ParseCertificate(bytes);
+		fmt.Print(x509Cert.Subject.CommonName)
 		if err != nil {
 			_ = updateTransactionStatus(stub, transactionID, "Error while parsing caller certificate")
 			return nil, nil
@@ -587,6 +589,7 @@ func (t *SimpleChaincode) tradeExec(stub shim.ChaincodeStubInterface, args []str
 			return nil, nil
 		}
 		x509Cert, err := x509.ParseCertificate(bytes);
+		fmt.Print(x509Cert.Subject.CommonName)
 		if err != nil {
 			_ = updateTransactionStatus(stub, transactionID, "Error while parsing caller certificate")
 			return nil, nil
@@ -736,6 +739,7 @@ func (t *SimpleChaincode) tradeSet(stub shim.ChaincodeStubInterface, args []stri
 			return nil, nil
 		}
 		x509Cert, err := x509.ParseCertificate(bytes);
+		fmt.Print(x509Cert.Subject.CommonName)
 		if err != nil {
 			_ = updateTransactionStatus(stub, transactionID, "Error while parsing caller certificate")
 			return nil, nil
@@ -1142,7 +1146,8 @@ func (t *SimpleChaincode) readQuoteRequests(stub shim.ChaincodeStubInterface, ar
 		} else if trade.Status == "Responded" { // check who has responded
 			respondedFlag := false
 			bytes, _ := stub.GetCallerCertificate()
-			x509Cert, _ := x509.ParseCertificate(bytes)
+			fmt.Print(string(bytes))
+			//x509Cert, _ := x509.ParseCertificate(bytes)
 			currentUserID := args[0] //x509Cert.Subject.CommonName
 			
 			for i:=0; i< len(trade.TransactionHistory); i++ {
