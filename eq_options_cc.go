@@ -247,12 +247,12 @@ func (t *SimpleChaincode) readTransaction(stub shim.ChaincodeStubInterface, args
 	
 	switch entity.EntityType {
 		case "RegBody":	return valAsbytes, nil
-		case "Client":	if tran.ClientID == x509Cert.Subject.CommonName {
+		case "Client":	if tran.ClientID == args[1] {
 							return valAsbytes, nil
 						}
 		case "Bank":	if tran.TransactionType == "Request" {
 							return valAsbytes, nil
-						} else if tran.BankID == x509Cert.Subject.CommonName {
+						} else if tran.BankID == args[1] {
 							return valAsbytes, nil
 						}
 	}
@@ -313,7 +313,7 @@ func (t *SimpleChaincode) requestForQuote(stub shim.ChaincodeStubInterface, args
 		TradeID: "trade"+strconv.Itoa(tradeID),			// create new TradeID
 		TransactionType: "Request",
 		OptionType: args[0],   						// based on input 
-		ClientID:	args[3] //x509Cert.Subject.CommonName,	// enrollmentID
+		ClientID:	args[3] ,//x509Cert.Subject.CommonName,	// enrollmentID
 		BankID: "",
 		StockSymbol: args[1],						// based on input
 		Quantity:	q,								// based on input
@@ -519,7 +519,7 @@ func (t *SimpleChaincode) respondToQuote(stub shim.ChaincodeStubInterface, args 
 		TransactionType: "Response",
 		OptionType: rfq.OptionType,														// get from rfq
 		ClientID:	rfq.ClientID,														// get from rfq
-		BankID: args[7]//x509Cert.Subject.CommonName,											// enrollmentID
+		BankID: args[7] ,//x509Cert.Subject.CommonName,											// enrollmentID
 		StockSymbol: rfq.StockSymbol,													// get from rfq
 		Quantity:	rfq.Quantity,														// get from rfq
 		OptionPrice: price,																// based on input
@@ -621,7 +621,7 @@ func (t *SimpleChaincode) tradeExec(stub shim.ChaincodeStubInterface, args []str
 		TradeID: tradeID,							// based on input
 		TransactionType: "Execute",
 		OptionType: quote.OptionType,				// get from quote transaction
-		ClientID: args[2]//x509Cert.Subject.CommonName,		// get from quote transaction
+		ClientID: args[2],//x509Cert.Subject.CommonName,		// get from quote transaction
 		BankID: quote.BankID,						// get from quote transaction
 		StockSymbol: quote.StockSymbol,				// get from quote transaction
 		Quantity:	quote.Quantity,					// get from quote transaction
@@ -834,7 +834,7 @@ func (t *SimpleChaincode) tradeSet(stub shim.ChaincodeStubInterface, args []stri
 				TradeID: tradeID,							// based on input
 				TransactionType: "Exercise",
 				OptionType: tExec.OptionType,				// get from tradeExec transaction
-				ClientID: x509Cert.Subject.CommonName,		// get from tradeExec transaction
+				ClientID: args[2] , //x509Cert.Subject.CommonName,		// get from tradeExec transaction
 				BankID: tExec.BankID,						// get from tradeExec transaction
 				StockSymbol: tExec.StockSymbol,				// get from tradeExec transaction
 				Quantity:	tExec.Quantity,					// get from tradeExec transaction
