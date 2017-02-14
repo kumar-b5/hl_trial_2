@@ -99,7 +99,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	}
 	bank2:= Entity{
 		EntityID: entity3,
-		EntityName:	"WhiteRock",
+		EntityName:	"Bank in America",
 		EntityType: "Bank",
 		Portfolio: []Stock{{Symbol:"GOOGL",Quantity:150},{Symbol:"AAPL",Quantity:100}},
 	}
