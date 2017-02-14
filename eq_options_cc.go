@@ -75,7 +75,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	// initialize entities	
 	client:= Entity{		
 		EntityID: entity1,	  
-		EntityName:	"Client A",
+		EntityName:	"Citabel",
 		EntityType: "Client",
 		Portfolio: []Stock{{Symbol:"GOOGL",Quantity:10},{Symbol:"AAPL",Quantity:20}},
 	}
@@ -87,7 +87,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	}
 	bank1:= Entity{
 		EntityID: entity2,
-		EntityName:	"Bank A",
+		EntityName:	"Silverman Sachs",
 		EntityType: "Bank",
 		Portfolio: []Stock{{Symbol:"MSFT",Quantity:200},{Symbol:"AAPL",Quantity:250},{Symbol:"AMZN",Quantity:400}},
 	}
@@ -99,7 +99,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	}
 	bank2:= Entity{
 		EntityID: entity3,
-		EntityName:	"Bank B",
+		EntityName:	"WhiteRock",
 		EntityType: "Bank",
 		Portfolio: []Stock{{Symbol:"GOOGL",Quantity:150},{Symbol:"AAPL",Quantity:100}},
 	}
